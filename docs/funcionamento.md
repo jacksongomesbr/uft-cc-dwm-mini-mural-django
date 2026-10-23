@@ -23,7 +23,7 @@ Nos dois casos, a porta de entrada do Django é a `application` de
 
 O navegador nunca fala com o banco. Todo acesso a dados passa pelo Django, e é
 nele que mora a regra de negócio: só quem entrou publica, só o autor arquiva o
-próprio recado, o texto do recado tem de 1 a 280 caracteres, todo recado nasce
+próprio recado e vê o recado depois de arquivado, o texto do recado tem de 1 a 280 caracteres, todo recado nasce
 publicado e privado, e só um recado publicado pode ser arquivado.
 
 ## Funcionalidades
@@ -90,8 +90,8 @@ O arquivo `mural/urls.py` liga cada endereço a uma view de `mural/views.py`.
 |---|---|---|---|---|---|
 | `/` | GET | Não | `mural` | Com login, mostra o formulário, o resumo e a lista na ordem do cookie; sem login, só os recados públicos ainda publicados | 200 com HTML |
 | `/` | POST | Sim | `mural` | Valida e grava um recado novo, público ou privado | 303 para `/` se válido, 422 com a página e a mensagem se inválido |
-| `/recado/N/` | GET | Só para recado privado | `recado` | Mostra um recado | 200, ou 404 se o recado não existe |
-| `/recado/N/arquivar/` | POST | Sim, e só o autor | `arquivar` | Arquiva o recado `N` e grava o instante | 303 para a lista ou para o detalhe; 403 se quem pede não é o autor; 405 se chegar por GET |
+| `/recado/N/` | GET | Para recado privado ou arquivado | `recado` | Mostra um recado | 200; 404 se o recado não existe ou é um arquivado de outra pessoa |
+| `/recado/N/arquivar/` | POST | Sim, e só o autor | `arquivar` | Arquiva o recado `N` e grava o instante | 303 para a lista ou para o detalhe; 403 se quem pede não é o autor; 404 se é um arquivado de outra pessoa; 405 se chegar por GET |
 | `/sobre/` | GET e POST | Sim | `sobre` | Mostra e grava a ordem no cookie | 200; 303 para `/sobre/?salvo=1` depois de gravar |
 | `/entrar/` | GET e POST | Não | `Entrar` (`LoginView`) | Mostra o formulário e confere usuário e senha | 302 para `next` ou `/` se conferem, 422 se não |
 | `/cadastro/` | GET e POST | Não | `cadastro` | Cria a conta e já entra nela | 303 para `/` se criou, 422 com as mensagens se não |
@@ -402,6 +402,7 @@ A tabela liga cada risco ao cuidado que o evita e ao lugar onde ele está.
 | Formulário enviado por outro site (CSRF) | `CsrfViewMiddleware` e `{% csrf_token %}` em todo formulário | `settings.py` e templates |
 | Redirecionamento para site externo | O destino depois de arquivar sai de duas opções fixas, nunca do pedido | `views.arquivar` |
 | Mudança de dados por link | Publicar e salvar a ordem só gravam em POST; arquivar tem `@require_POST`, e a `LogoutView` só aceita POST | `mural/views.py` e `mural/urls.py` |
+| Ver recado arquivado de outra pessoa | A lista filtra os arquivados pelo autor, e o detalhe responde 404 a quem não é o autor | `listar_recados()` e `pode_ser_visto_por()` |
 | Arquivar recado de outra pessoa | A view confere o autor e responde 403; o `UPDATE` repete o filtro por autor | `views.arquivar` e `arquivar_recado()` |
 | Senha vazada do banco | `auth_user` guarda só o hash PBKDF2, com sal | `django.contrib.auth` |
 | Fixação de sessão | O login troca o identificador da sessão | `django.contrib.auth` |

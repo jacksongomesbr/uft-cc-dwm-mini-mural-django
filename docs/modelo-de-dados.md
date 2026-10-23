@@ -89,8 +89,9 @@ do próprio `django.contrib.auth`, com tabela criada pelo `migrate`.
 | `arquivado_em = DateTimeField(null=True)` | `arquivado_em timestamptz` | `None` enquanto o recado está publicado |
 | `Meta.db_table = 'recados'` | nome da tabela | Sem isso, o Django procuraria `mural_recado` |
 
-O modelo tem ainda duas regras sem banco: `leitura_publica`, verdadeira para
-recado público e publicado, e `pode_ser_arquivado_por(usuario)`, verdadeira só
+O modelo tem ainda três regras sem banco: `leitura_publica`, verdadeira para
+recado público e publicado; `pode_ser_visto_por(usuario)`, que deixa o
+arquivado só para o autor; e `pode_ser_arquivado_por(usuario)`, verdadeira só
 para o autor de um recado publicado. Views e templates usam as duas para decidir
 quem lê e quem vê o botão de arquivar.
 
@@ -101,8 +102,8 @@ se os dois concordam.
 
 Um recado só anda em uma direção: a aplicação não oferece desarquivar nem
 apagar. O campo `publico` é decidido na publicação e não muda depois. Só o
-autor arquiva, e o arquivamento grava o instante em `arquivado_em`. Um recado
-público arquivado deixa de ser lido sem login.
+autor arquiva, e o arquivamento grava o instante em `arquivado_em`. Depois de
+arquivado, o recado só aparece para o autor, mesmo que seja público.
 
 ```mermaid
 stateDiagram-v2
@@ -119,7 +120,7 @@ separados do texto da consulta, como parâmetros, representados por `%s`.
 
 | Função | ORM | SQL gerado (resumido) |
 |---|---|---|
-| `listar_recados('mais-recentes')` | `Recado.objects.select_related('autor').order_by('-criado_em', '-id')` | `SELECT recados.*, auth_user.* FROM recados INNER JOIN auth_user ON recados.autor_id = auth_user.id ORDER BY criado_em DESC, id DESC` |
+| `listar_recados('mais-recentes', usuario)` | `Recado.objects.select_related('autor').filter(Q(status='publicado') \| Q(autor=usuario)).order_by('-criado_em', '-id')` | `SELECT recados.*, auth_user.* FROM recados INNER JOIN auth_user ON recados.autor_id = auth_user.id WHERE (status = 'publicado' OR autor_id = %s) ORDER BY criado_em DESC, id DESC` |
 | `listar_recados('mais-antigos')` | o mesmo, com `order_by('criado_em', 'id')` | `... ORDER BY criado_em ASC, id ASC` |
 | `listar_recados_publicos(ordem)` | o mesmo, com `.filter(publico=True, status='publicado')` | `... WHERE publico AND status = 'publicado' ORDER BY ...` |
 | `buscar_recado(id)` | `Recado.objects.select_related('autor').filter(id=id).first()` | `... WHERE recados.id = %s ORDER BY recados.id ASC LIMIT 1` |

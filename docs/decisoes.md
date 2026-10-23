@@ -417,6 +417,9 @@ nota que aponta para a nova, e a nova entra no fim do documento.
 
 ### D27. Página inicial com os recados públicos para quem não entrou
 
+> **Revista na etapa 4 (D30):** quem entrou vê os recados publicados de
+> todos, mas os arquivados só do próprio autor.
+
 - **Decisão:** a view `mural` deixou de ter `@login_required`. Para quem não
   entrou, ela desenha `recados_publicos.html` com os recados públicos ainda
   publicados, só para leitura. Quem entrou continua vendo o mural completo no
@@ -465,3 +468,19 @@ nota que aponta para a nova, e a nova entra no fim do documento.
   jeitos, e o banco confere a coerência. Como o `carregar_esquema --se-ausente`
   não recria uma tabela que já existe, um banco da etapa 3 precisa ser recriado
   para ganhar a coluna.
+
+### D30. Recado arquivado só para o autor
+
+- **Decisão:** para quem entrou, a lista traz os recados publicados de todos e
+  os arquivados só do próprio autor (`listar_recados()` filtra por
+  `status = 'publicado' OR autor_id = usuário`). O detalhe e o arquivamento de
+  um recado arquivado de outra pessoa respondem 404, com a página de recado
+  ausente. A regra fica em `pode_ser_visto_por()`.
+- **Alternativa descartada:** responder 403 a quem abre o arquivado de outra
+  pessoa, ou mostrar o arquivado na lista sem o texto.
+- **Motivo:** arquivar é tirar o recado do mural para todos, menos para quem o
+  escreveu. O 404 trata o recado como se não existisse e não revela que há um
+  recado arquivado naquele endereço; um 403 confirmaria que ele existe.
+- **Consequência aceita:** cada usuário vê um resumo diferente, porque o total
+  de arquivados conta só os dele. Quem não entrou continua sendo levado ao
+  login ao abrir um recado que não pode ver, e só depois do login recebe o 404.

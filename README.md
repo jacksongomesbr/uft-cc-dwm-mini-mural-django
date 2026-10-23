@@ -21,7 +21,8 @@ sem instalar Python, servidor web e PostgreSQL, use o
 - Ver a lista de recados com hora, autor e o resumo de publicados e arquivados.
 - Abrir o detalhe de um recado, com data e hora por extenso.
 - Arquivar o próprio recado pela lista ou pelo detalhe. Só o autor arquiva, e a
-  data e a hora do arquivamento ficam gravadas.
+  data e a hora do arquivamento ficam gravadas. Depois de arquivado, o recado
+  só aparece para o autor.
 - Escolher, em Sobre, a ordem do mural, guardada no navegador.
 
 Como cada uma funciona, e por quê, está em [docs/](docs/README.md).
@@ -36,7 +37,7 @@ etapa, e o `main` sempre aponta para a mais recente.
 | `etapa-1-monolito` | 1: Monólito | Mural sem login, instalado direto com nginx e Gunicorn, ou Apache e mod_wsgi, e PostgreSQL. |
 | `etapa-2-docker` | 2: Docker | O mesmo mural, com um `compose.yaml` para rodar na própria máquina. |
 | `etapa-3-login` | 3: Login | Cadastro, login e saída com `django.contrib.auth`; todo o mural exige login, e o recado pode ser público. |
-| `etapa-4-autoria` | 4: Autoria | Só o autor arquiva, a data do arquivamento fica gravada, e a página inicial mostra os recados públicos a quem não entrou. |
+| `etapa-4-autoria` | 4: Autoria | Só o autor arquiva e vê o recado arquivado, a data do arquivamento fica gravada, e a página inicial mostra os recados públicos a quem não entrou. |
 | `main` | (a mais recente) | Igual ao ramo da etapa mais recente. |
 
 Para estudar uma etapa, troque de ramo, por exemplo `git switch etapa-1-monolito`.
@@ -388,7 +389,9 @@ Com o site no ar, exercite o mural no navegador:
 5. Arquive um recado seu pela lista e outro pelo detalhe. Os dois passam a
    mostrar "Arquivado", com a hora; o detalhe mostra a data e a hora completas.
    Nos recados de outro usuário, como os do `exemplo`, o botão "Arquivar" não
-   aparece.
+   aparece, e o recado arquivado do `exemplo` nem aparece na sua lista. Entre
+   como `exemplo` e confira: seus recados arquivados também não aparecem para
+   ele.
 6. Em Sobre, escolha "Mais antigos primeiro", salve e volte ao Mural. A ordem se
    inverte e continua assim depois de recarregar.
 7. Clique em Sair. A página inicial mostra o recado público que você publicou,
