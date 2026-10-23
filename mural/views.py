@@ -1,8 +1,8 @@
 """As views do mural. Cada uma recebe um pedido e devolve uma resposta.
 
 GET mostra a página; POST grava e redireciona (POST/redirect/GET). Todas
-exigem login, menos o detalhe de um recado público e as telas de entrar e de
-criar conta.
+exigem login, menos a lista e o detalhe dos recados públicos e as telas de
+entrar e de criar conta.
 """
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
@@ -31,14 +31,23 @@ def redirecionar(endereco):
     return resposta
 
 
-@login_required
 @require_http_methods(['GET', 'POST'])
 def mural(request):
-    """Lista os recados, mostra o resumo e recebe o formulário de recado novo.
+    """Página inicial.
 
-    O @login_required manda quem não entrou para a tela de login (LOGIN_URL,
-    em settings.py), com o endereço pedido no parâmetro next.
+    Quem entrou vê o mural completo: lista, resumo e formulário de recado novo.
+    Quem não entrou vê só a lista dos recados públicos, para leitura.
     """
+    if not request.user.is_authenticated:
+        # Publicar continua exigindo login. redirect_to_login manda para
+        # LOGIN_URL, em settings.py, com o endereço pedido no parâmetro next.
+        if request.method == 'POST':
+            return redirect_to_login(request.get_full_path())
+        return render(request, 'mural/recados_publicos.html', {
+            'pagina_atual': 'publicos',
+            'recados': recados.listar_recados_publicos(ler_ordem(request)),
+        })
+
     texto = ''
     publico = False
     erro = None
@@ -78,8 +87,8 @@ def mural(request):
 def recado(request, id):
     """Detalhe de um recado: /recado/42/
 
-    É a única view do mural que atende quem não entrou, e só para recado
-    público. Nesse caso o template mostra o recado sem o botão de arquivar.
+    Quem não entrou só lê recado público e ainda publicado, sem o botão de
+    arquivar. O botão aparece só para o autor.
 
     O conversor <int:id> em urls.py só deixa chegar aqui um número. Um id que
     não é número nem chama esta view: o Django responde 404 antes.
@@ -88,14 +97,15 @@ def recado(request, id):
     if encontrado is None:
         return render(request, 'mural/nao_encontrado.html', status=404)
 
-    # Recado privado só para quem entrou. Quem não entrou vai para o login e,
-    # depois dele, volta a este endereço.
-    if not encontrado.publico and not request.user.is_authenticated:
+    # Recado privado ou arquivado só para quem entrou. Quem não entrou vai
+    # para o login e, depois dele, volta a este endereço.
+    if not request.user.is_authenticated and not encontrado.leitura_publica:
         return redirect_to_login(request.get_full_path())
 
     return render(request, 'mural/recado.html', {
         'pagina_atual': 'mural',
         'recado': encontrado,
+        'pode_arquivar': encontrado.pode_ser_arquivado_por(request.user),
     })
 
 
@@ -108,7 +118,19 @@ def arquivar(request, id):
     link que arquivasse poderia ser disparado por um buscador ou por uma
     pré-carga do navegador.
     """
-    recados.arquivar_recado(id)
+    encontrado = recados.buscar_recado(id)
+    if encontrado is None:
+        return render(request, 'mural/nao_encontrado.html', status=404)
+
+    # Só o autor arquiva. O template esconde o botão de quem não é o autor, mas
+    # um POST pode ser montado à mão, então a regra é conferida aqui de novo.
+    # Recado já arquivado passa direto: arquivar de novo não muda nada.
+    if encontrado.autor_id != request.user.id:
+        return render(request, 'mural/proibido.html', {
+            'mensagem': 'Só quem publicou o recado pode arquivá-lo.',
+        }, status=403)
+
+    recados.arquivar_recado(id, request.user)
 
     # O destino sai de duas opções fixas. Aceitar um endereço qualquer vindo
     # do formulário deixaria um site externo usar este para redirecionar

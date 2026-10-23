@@ -55,8 +55,10 @@
                     </p>
 
                     {% if recado.arquivado %}
-                        <span class="etiqueta">Arquivado</span>
-                    {% else %}
+                        <span class="etiqueta">
+                            Arquivado às <time datetime="{{ recado.arquivado_em|date:'c' }}">{{ recado.arquivado_em|date:'H:i' }}</time>
+                        </span>
+                    {% elif recado.autor_id == user.id %}
                         <form method="post" action="{% url 'arquivar' recado.id %}">
                             {% csrf_token %}
                             <button type="submit" class="botao"

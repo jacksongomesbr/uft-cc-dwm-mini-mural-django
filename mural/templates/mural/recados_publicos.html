@@ -1,0 +1,35 @@
+{% extends 'mural/base.html' %}
+
+{% comment %}
+Página inicial de quem não entrou: só os recados públicos ainda publicados,
+sem formulário e sem botões.
+{% endcomment %}
+
+{% block titulo %}Recados públicos{% endblock %}
+
+{% block conteudo %}
+<h1>Recados públicos</h1>
+
+<p class="apoio">
+    Estes recados foram marcados como públicos por quem os publicou.
+    <a href="{% url 'entrar' %}">Entre</a> ou <a href="{% url 'cadastro' %}">crie uma conta</a>
+    para ver o mural completo e publicar.
+</p>
+
+{% if not recados %}
+    <p class="vazio">Nenhum recado público no momento.</p>
+{% else %}
+    <ul class="lista">
+        {% for recado in recados %}
+            <li id="recado-{{ recado.id }}" class="cartao">
+                {# Texto colado às tags: o CSS preserva as quebras de linha do recado. #}
+                <a class="texto-do-recado" href="{% url 'recado' recado.id %}">{{ recado.texto }}</a>
+                <p class="apoio">
+                    <time datetime="{{ recado.criado_em|date:'c' }}">{{ recado.criado_em|date:'j \d\e F \d\e Y \à\s H:i'|lower }}</time>
+                    · {{ recado.autor.username }}
+                </p>
+            </li>
+        {% endfor %}
+    </ul>
+{% endif %}
+{% endblock %}

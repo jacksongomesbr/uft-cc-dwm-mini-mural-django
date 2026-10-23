@@ -30,6 +30,8 @@ class Recado(models.Model):
     )
     # Recado público pode ser lido sem login. Todo recado nasce privado.
     publico = models.BooleanField(db_default=False)
+    # Instante do arquivamento; None enquanto o recado está publicado.
+    arquivado_em = models.DateTimeField(null=True)
 
     class Meta:
         managed = False
@@ -38,6 +40,19 @@ class Recado(models.Model):
     @property
     def arquivado(self):
         return self.status == self.ARQUIVADO
+
+    @property
+    def leitura_publica(self):
+        """Um recado público e ainda publicado pode ser lido sem login."""
+        return self.publico and not self.arquivado
+
+    def pode_ser_arquivado_por(self, usuario):
+        """Só o autor arquiva, e só enquanto o recado está publicado."""
+        return (
+            usuario.is_authenticated
+            and not self.arquivado
+            and self.autor_id == usuario.id
+        )
 
     def __str__(self):
         return self.texto

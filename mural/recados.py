@@ -2,6 +2,8 @@
 
 As views chamam estas funções e não montam consultas.
 """
+from django.db.models.functions import Now
+
 from .models import Recado
 
 
@@ -14,6 +16,17 @@ def listar_recados(ordem):
     # select_related traz o autor na mesma consulta, com um JOIN. Sem ele, o
     # template faria uma consulta a mais por recado ao mostrar o nome.
     recados = Recado.objects.select_related('autor')
+    if ordem == 'mais-antigos':
+        return list(recados.order_by('criado_em', 'id'))
+    return list(recados.order_by('-criado_em', '-id'))
+
+
+def listar_recados_publicos(ordem):
+    """Lista só os recados que qualquer pessoa pode ler: públicos e ainda
+    publicados. É a lista de quem não entrou."""
+    recados = Recado.objects.select_related('autor').filter(
+        publico=True, status=Recado.PUBLICADO
+    )
     if ordem == 'mais-antigos':
         return list(recados.order_by('criado_em', 'id'))
     return list(recados.order_by('-criado_em', '-id'))
@@ -33,14 +46,16 @@ def publicar_recado(texto, autor, publico):
     Recado.objects.create(texto=texto, autor=autor, publico=publico)
 
 
-def arquivar_recado(id):
-    """Arquiva um recado publicado.
+def arquivar_recado(id, autor):
+    """Arquiva um recado publicado do autor e grava o instante do arquivamento.
 
-    O filtro por status torna a operação repetível: arquivar duas vezes, ou
-    arquivar um id que não existe, não altera nenhuma linha e não gera erro.
+    O filtro por autor repete, no banco, a regra que a view já conferiu com
+    pode_ser_arquivado_por(). O filtro por status torna a operação repetível:
+    arquivar duas vezes não altera nada na segunda, e a data do primeiro
+    arquivamento fica.
     """
-    Recado.objects.filter(id=id, status=Recado.PUBLICADO).update(
-        status=Recado.ARQUIVADO
+    Recado.objects.filter(id=id, autor=autor, status=Recado.PUBLICADO).update(
+        status=Recado.ARQUIVADO, arquivado_em=Now()
     )
 
 

@@ -8,6 +8,7 @@ teria.
 """
 from datetime import datetime, timezone
 
+from django.contrib.auth.models import AnonymousUser, User
 from django.template import Context, Template
 from django.test import RequestFactory, SimpleTestCase
 
@@ -85,3 +86,35 @@ class ResumirRecadosTest(SimpleTestCase):
 
     def test_lista_vazia(self):
         self.assertEqual(resumir_recados([]), {'publicados': 0, 'arquivados': 0})
+
+
+class RegrasDoRecadoTest(SimpleTestCase):
+    """leitura_publica e pode_ser_arquivado_por, sem banco."""
+
+    def setUp(self):
+        self.ana = User(id=7, username='ana')
+        self.recado = Recado(autor=self.ana, status=Recado.PUBLICADO, publico=True)
+
+    def test_autor_arquiva_o_proprio_recado(self):
+        self.assertTrue(self.recado.pode_ser_arquivado_por(self.ana))
+
+    def test_outro_usuario_nao_arquiva(self):
+        self.assertFalse(self.recado.pode_ser_arquivado_por(User(id=8, username='bia')))
+
+    def test_sem_login_nao_arquiva(self):
+        self.assertFalse(self.recado.pode_ser_arquivado_por(AnonymousUser()))
+
+    def test_recado_arquivado_nao_arquiva_de_novo(self):
+        self.recado.status = Recado.ARQUIVADO
+        self.assertFalse(self.recado.pode_ser_arquivado_por(self.ana))
+
+    def test_publico_e_publicado_tem_leitura_publica(self):
+        self.assertTrue(self.recado.leitura_publica)
+
+    def test_privado_nao_tem_leitura_publica(self):
+        self.recado.publico = False
+        self.assertFalse(self.recado.leitura_publica)
+
+    def test_publico_arquivado_nao_tem_leitura_publica(self):
+        self.recado.status = Recado.ARQUIVADO
+        self.assertFalse(self.recado.leitura_publica)

@@ -19,6 +19,7 @@
                     <button type="submit" class="botao-texto">Sair</button>
                 </form>
             {% else %}
+                <a href="{% url 'mural' %}" {% if pagina_atual == 'publicos' %}aria-current="page"{% endif %}>Recados públicos</a>
                 <a href="{% url 'entrar' %}" {% if pagina_atual == 'entrar' %}aria-current="page"{% endif %}>Entrar</a>
                 <a href="{% url 'cadastro' %}" {% if pagina_atual == 'cadastro' %}aria-current="page"{% endif %}>Criar conta</a>
             {% endif %}

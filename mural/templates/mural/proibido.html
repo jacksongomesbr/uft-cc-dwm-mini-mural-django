@@ -1,0 +1,11 @@
+{% extends 'mural/base.html' %}
+
+{% block titulo %}Ação não permitida{% endblock %}
+
+{% block conteudo %}
+<h1>Ação não permitida</h1>
+<section class="cartao">
+    <p>{{ mensagem }}</p>
+    <a class="botao" href="{% url 'mural' %}">Voltar ao mural</a>
+</section>
+{% endblock %}
