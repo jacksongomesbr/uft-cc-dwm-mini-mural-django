@@ -118,3 +118,23 @@ class RegrasDoRecadoTest(SimpleTestCase):
     def test_publico_arquivado_nao_tem_leitura_publica(self):
         self.recado.status = Recado.ARQUIVADO
         self.assertFalse(self.recado.leitura_publica)
+
+    def test_autor_ve_o_proprio_arquivado(self):
+        self.recado.status = Recado.ARQUIVADO
+        self.assertTrue(self.recado.pode_ser_visto_por(self.ana))
+
+    def test_outro_usuario_nao_ve_arquivado(self):
+        self.recado.status = Recado.ARQUIVADO
+        self.assertFalse(self.recado.pode_ser_visto_por(User(id=8, username='bia')))
+
+    def test_sem_login_nao_ve_arquivado(self):
+        self.recado.status = Recado.ARQUIVADO
+        self.assertFalse(self.recado.pode_ser_visto_por(AnonymousUser()))
+
+    def test_logado_ve_publicado_privado_de_outro(self):
+        self.recado.publico = False
+        self.assertTrue(self.recado.pode_ser_visto_por(User(id=8, username='bia')))
+
+    def test_sem_login_nao_ve_publicado_privado(self):
+        self.recado.publico = False
+        self.assertFalse(self.recado.pode_ser_visto_por(AnonymousUser()))

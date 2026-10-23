@@ -46,6 +46,13 @@ class Recado(models.Model):
         """Um recado público e ainda publicado pode ser lido sem login."""
         return self.publico and not self.arquivado
 
+    def pode_ser_visto_por(self, usuario):
+        """Recado arquivado, só o autor vê; publicado e privado, qualquer
+        usuário logado; publicado e público, qualquer pessoa."""
+        if self.arquivado:
+            return usuario.is_authenticated and self.autor_id == usuario.id
+        return usuario.is_authenticated or self.publico
+
     def pode_ser_arquivado_por(self, usuario):
         """Só o autor arquiva, e só enquanto o recado está publicado."""
         return (

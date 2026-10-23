@@ -67,7 +67,7 @@ def mural(request):
         # que a pessoa digitou. O código 422 diz que o pedido foi recusado.
         status = 422
 
-    lista = recados.listar_recados(ler_ordem(request))
+    lista = recados.listar_recados(ler_ordem(request), request.user)
     restantes = LIMITE_DO_RECADO - len(texto)
 
     return render(request, 'mural/mural.html', {
@@ -87,8 +87,8 @@ def mural(request):
 def recado(request, id):
     """Detalhe de um recado: /recado/42/
 
-    Quem não entrou só lê recado público e ainda publicado, sem o botão de
-    arquivar. O botão aparece só para o autor.
+    Quem não entrou só lê recado público e ainda publicado. Recado arquivado
+    só aparece para o autor. O botão de arquivar aparece só para o autor.
 
     O conversor <int:id> em urls.py só deixa chegar aqui um número. Um id que
     não é número nem chama esta view: o Django responde 404 antes.
@@ -97,10 +97,14 @@ def recado(request, id):
     if encontrado is None:
         return render(request, 'mural/nao_encontrado.html', status=404)
 
-    # Recado privado ou arquivado só para quem entrou. Quem não entrou vai
-    # para o login e, depois dele, volta a este endereço.
-    if not request.user.is_authenticated and not encontrado.leitura_publica:
-        return redirect_to_login(request.get_full_path())
+    # Quem não pode ver o recado: sem login, vai para o login e, depois dele,
+    # volta a este endereço; com login, é um arquivado de outra pessoa, e a
+    # resposta é a mesma de um recado que não existe, para não revelar que ele
+    # existe.
+    if not encontrado.pode_ser_visto_por(request.user):
+        if not request.user.is_authenticated:
+            return redirect_to_login(request.get_full_path())
+        return render(request, 'mural/nao_encontrado.html', status=404)
 
     return render(request, 'mural/recado.html', {
         'pagina_atual': 'mural',
@@ -119,7 +123,8 @@ def arquivar(request, id):
     pré-carga do navegador.
     """
     encontrado = recados.buscar_recado(id)
-    if encontrado is None:
+    # Arquivado de outra pessoa é tratado como inexistente, como no detalhe.
+    if encontrado is None or not encontrado.pode_ser_visto_por(request.user):
         return render(request, 'mural/nao_encontrado.html', status=404)
 
     # Só o autor arquiva. O template esconde o botão de quem não é o autor, mas

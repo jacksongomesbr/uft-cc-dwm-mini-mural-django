@@ -2,20 +2,25 @@
 
 As views chamam estas funções e não montam consultas.
 """
+from django.db.models import Q
 from django.db.models.functions import Now
 
 from .models import Recado
 
 
-def listar_recados(ordem):
-    """Lista todos os recados na ordem escolhida.
+def listar_recados(ordem, usuario):
+    """Lista os recados que o usuário logado vê, na ordem escolhida: os
+    publicados de todos e os arquivados só dele.
 
     A ordem vem de uma lista fechada: o valor do cookie decide entre duas
     strings fixas e nunca chega ao banco.
     """
     # select_related traz o autor na mesma consulta, com um JOIN. Sem ele, o
     # template faria uma consulta a mais por recado ao mostrar o nome.
-    recados = Recado.objects.select_related('autor')
+    # Q junta condições com | (OU) em uma consulta só.
+    recados = Recado.objects.select_related('autor').filter(
+        Q(status=Recado.PUBLICADO) | Q(autor=usuario)
+    )
     if ordem == 'mais-antigos':
         return list(recados.order_by('criado_em', 'id'))
     return list(recados.order_by('-criado_em', '-id'))
