@@ -8,13 +8,15 @@
 <section class="cartao {% if recado.arquivado %}arquivado{% endif %}">
     <p class="texto-completo">{{ recado.texto }}</p>
     {# O Django escreve o mês com maiúscula ("Março"); o lower deixa "março". #}
-    <time class="apoio" datetime="{{ recado.criado_em|date:'c' }}">
-        {{ recado.criado_em|date:'j \d\e F \d\e Y \à\s H:i'|lower }}
-    </time>
+    <p class="apoio">
+        <time datetime="{{ recado.criado_em|date:'c' }}">{{ recado.criado_em|date:'j \d\e F \d\e Y \à\s H:i'|lower }}</time>
+        · por {{ recado.autor.username }}
+        · {% if recado.publico %}Público{% else %}Privado{% endif %}
+    </p>
 
     {% if recado.arquivado %}
         <p class="etiqueta">Arquivado</p>
-    {% else %}
+    {% elif user.is_authenticated %}
         <form method="post" action="{% url 'arquivar' recado.id %}">
             {% csrf_token %}
             <input type="hidden" name="voltar_para" value="detalhe">
@@ -23,5 +25,9 @@
     {% endif %}
 </section>
 
-<a href="{% url 'mural' %}">Ver todos os recados</a>
+{% if user.is_authenticated %}
+    <a href="{% url 'mural' %}">Ver todos os recados</a>
+{% else %}
+    <p class="apoio">Você está lendo um recado público. <a href="{% url 'entrar' %}">Entre</a> para ver o mural.</p>
+{% endif %}
 {% endblock %}

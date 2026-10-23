@@ -9,8 +9,19 @@
 <body>
     <header class="topo">
         <nav class="coluna navegacao" aria-label="Principal">
-            <a href="{% url 'mural' %}" {% if pagina_atual == 'mural' %}aria-current="page"{% endif %}>Mural</a>
-            <a href="{% url 'sobre' %}" {% if pagina_atual == 'sobre' %}aria-current="page"{% endif %}>Sobre</a>
+            {# user vem do context processor auth; a navegação muda conforme o login. #}
+            {% if user.is_authenticated %}
+                <a href="{% url 'mural' %}" {% if pagina_atual == 'mural' %}aria-current="page"{% endif %}>Mural</a>
+                <a href="{% url 'sobre' %}" {% if pagina_atual == 'sobre' %}aria-current="page"{% endif %}>Sobre</a>
+                <form class="sessao" method="post" action="{% url 'sair' %}">
+                    {% csrf_token %}
+                    <span class="apoio">{{ user.username }}</span>
+                    <button type="submit" class="botao-texto">Sair</button>
+                </form>
+            {% else %}
+                <a href="{% url 'entrar' %}" {% if pagina_atual == 'entrar' %}aria-current="page"{% endif %}>Entrar</a>
+                <a href="{% url 'cadastro' %}" {% if pagina_atual == 'cadastro' %}aria-current="page"{% endif %}>Criar conta</a>
+            {% endif %}
         </nav>
     </header>
     <main class="coluna">

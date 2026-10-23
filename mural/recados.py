@@ -11,23 +11,26 @@ def listar_recados(ordem):
     A ordem vem de uma lista fechada: o valor do cookie decide entre duas
     strings fixas e nunca chega ao banco.
     """
+    # select_related traz o autor na mesma consulta, com um JOIN. Sem ele, o
+    # template faria uma consulta a mais por recado ao mostrar o nome.
+    recados = Recado.objects.select_related('autor')
     if ordem == 'mais-antigos':
-        return list(Recado.objects.order_by('criado_em', 'id'))
-    return list(Recado.objects.order_by('-criado_em', '-id'))
+        return list(recados.order_by('criado_em', 'id'))
+    return list(recados.order_by('-criado_em', '-id'))
 
 
 def buscar_recado(id):
     """Devolve o recado com esse id, ou None se ele não existe."""
-    return Recado.objects.filter(id=id).first()
+    return Recado.objects.select_related('autor').filter(id=id).first()
 
 
-def publicar_recado(texto):
+def publicar_recado(texto, autor, publico):
     """Grava um recado novo.
 
     Data e status vêm dos valores padrão da tabela. Quem chama já validou o
     texto com validar_recado().
     """
-    Recado.objects.create(texto=texto)
+    Recado.objects.create(texto=texto, autor=autor, publico=publico)
 
 
 def arquivar_recado(id):

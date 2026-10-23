@@ -1,0 +1,31 @@
+{% extends 'mural/base.html' %}
+
+{% block titulo %}Criar conta{% endblock %}
+
+{% block conteudo %}
+<h1>Criar conta</h1>
+
+{# form é o UserCreationForm do Django: username, password1 e password2. #}
+<form class="cartao formulario" method="post" action="{% url 'cadastro' %}" novalidate>
+    {% csrf_token %}
+
+    <label for="{{ form.username.id_for_label }}">Usuário</label>
+    {{ form.username }}
+    <p class="apoio">{{ form.username.help_text }}</p>
+    {% if form.username.errors %}<div class="erro">{{ form.username.errors }}</div>{% endif %}
+
+    <label for="{{ form.password1.id_for_label }}">Senha</label>
+    {{ form.password1 }}
+    {# O help_text da senha é uma lista HTML montada pelo próprio Django. #}
+    <div class="apoio">{{ form.password1.help_text|safe }}</div>
+    {% if form.password1.errors %}<div class="erro">{{ form.password1.errors }}</div>{% endif %}
+
+    <label for="{{ form.password2.id_for_label }}">Repita a senha</label>
+    {{ form.password2 }}
+    {% if form.password2.errors %}<div class="erro">{{ form.password2.errors }}</div>{% endif %}
+
+    <button type="submit" class="botao">Criar conta</button>
+</form>
+
+<p>Já tem conta? <a href="{% url 'entrar' %}">Entre</a>.</p>
+{% endblock %}

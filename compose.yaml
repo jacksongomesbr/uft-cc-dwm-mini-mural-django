@@ -47,11 +47,9 @@ services:
       POSTGRES_PASSWORD: senha-so-para-docker
       POSTGRES_DB: mini_mural
     volumes:
-      # Na primeira vez, com o volume vazio, a imagem executa os arquivos de
-      # /docker-entrypoint-initdb.d em ordem alfabética: esquema, depois exemplos.
-      - ./sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
-      - ./sql/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
-      # Os dados ficam neste volume e sobrevivem a "docker compose down".
+      # Os dados ficam neste volume e sobrevivem a "docker compose down". As
+      # tabelas não são criadas aqui: a tabela recados depende das tabelas do
+      # Django, e o serviço app cria todas na ordem certa (docker/Dockerfile).
       - dados:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mini_mural -d mini_mural"]

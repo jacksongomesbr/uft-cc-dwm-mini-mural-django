@@ -18,6 +18,11 @@
 
     <p id="erro-texto" class="erro" aria-live="polite">{{ erro|default:'' }}</p>
 
+    <label class="caixa">
+        <input type="checkbox" name="publico" value="1" {% if publico %}checked{% endif %}>
+        Público: qualquer pessoa com o endereço pode ler, sem login
+    </label>
+
     <div class="linha">
         <p id="contador" class="apoio {% if perto_do_limite %}perto-do-limite{% endif %}">
             {{ restantes }} caracteres restantes
@@ -43,9 +48,11 @@
                 <a class="texto-do-recado" href="{% url 'recado' recado.id %}">{{ recado.texto }}</a>
 
                 <div class="linha">
-                    <time class="apoio" datetime="{{ recado.criado_em|date:'c' }}">
-                        {{ recado.criado_em|date:'H:i' }}
-                    </time>
+                    <p class="apoio">
+                        <time datetime="{{ recado.criado_em|date:'c' }}">{{ recado.criado_em|date:'H:i' }}</time>
+                        · {{ recado.autor.username }}
+                        · {% if recado.publico %}Público{% else %}Privado{% endif %}
+                    </p>
 
                     {% if recado.arquivado %}
                         <span class="etiqueta">Arquivado</span>

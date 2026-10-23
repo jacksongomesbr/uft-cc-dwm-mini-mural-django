@@ -19,17 +19,26 @@ SECRET_KEY = config.SECRET_KEY
 DEBUG = config.DEBUG
 ALLOWED_HOSTS = config.ENDERECOS_ACEITOS
 
-# Só o necessário. Sem admin, auth, sessions nem messages: o mural não tem
-# login, e esses apps exigiriam tabelas criadas por migrations.
+# Só o necessário. auth guarda usuários e senhas, sessions guarda quem está
+# logado, e contenttypes é exigido pelo auth. As tabelas desses três apps
+# vêm das migrations do próprio Django (python manage.py migrate); a tabela
+# do mural continua vindo de sql/schema.sql. Sem admin nem messages.
 INSTALLED_APPS = [
+    'django.contrib.contenttypes',
+    'django.contrib.auth',
+    'django.contrib.sessions',
     'django.contrib.staticfiles',
     'mural',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # Lê o cookie da sessão e carrega request.session.
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    # A partir da sessão, preenche request.user.
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
@@ -42,8 +51,28 @@ TEMPLATES = [
         'DIRS': [],
         # Procura templates na pasta templates/ de cada app.
         'APP_DIRS': True,
-        'OPTIONS': {'context_processors': []},
+        # request e auth colocam request e user em todo template, para a
+        # navegação saber se há alguém logado.
+        'OPTIONS': {'context_processors': [
+            'django.template.context_processors.request',
+            'django.contrib.auth.context_processors.auth',
+        ]},
     },
+]
+
+# Para onde o @login_required manda quem não entrou, e para onde o login e o
+# logout levam depois. São nomes de mural/urls.py.
+LOGIN_URL = 'entrar'
+LOGIN_REDIRECT_URL = 'mural'
+LOGOUT_REDIRECT_URL = 'entrar'
+
+# Regras de senha que o formulário de cadastro aplica. As mensagens saem em
+# português por causa do LANGUAGE_CODE.
+AUTH_PASSWORD_VALIDATORS = [
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
 DATABASES = {

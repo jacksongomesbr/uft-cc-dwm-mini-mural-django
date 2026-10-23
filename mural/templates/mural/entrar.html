@@ -1,0 +1,28 @@
+{% extends 'mural/base.html' %}
+
+{% block titulo %}Entrar{% endblock %}
+
+{% block conteudo %}
+<h1>Entrar</h1>
+
+{# form é o AuthenticationForm que a LoginView do Django entrega. #}
+<form class="cartao formulario" method="post" action="{% url 'entrar' %}">
+    {% csrf_token %}
+    {# Depois do login, volta para a página que pediu o login. #}
+    <input type="hidden" name="next" value="{{ next }}">
+
+    <label for="{{ form.username.id_for_label }}">Usuário</label>
+    {{ form.username }}
+
+    <label for="{{ form.password.id_for_label }}">Senha</label>
+    {{ form.password }}
+
+    {% if form.non_field_errors %}
+        <div class="erro" role="alert">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <button type="submit" class="botao">Entrar</button>
+</form>
+
+<p>Ainda não tem conta? <a href="{% url 'cadastro' %}">Crie uma conta</a>.</p>
+{% endblock %}

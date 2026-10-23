@@ -18,6 +18,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY manage.py .
 COPY mini_mural mini_mural
 COPY mural mural
+COPY sql sql
 COPY docker/config.py config.py
 
 # O Gunicorn roda com um usuário sem privilégios, e não como root. Ele precisa
@@ -29,7 +30,10 @@ RUN useradd --create-home mural \
     && chown mural staticfiles
 USER mural
 
-# Copia os estáticos para o volume que o nginx lê e liga o Gunicorn. O
-# collectstatic roda a cada partida para o volume acompanhar o código da
-# imagem.
-CMD ["sh", "-c", "python manage.py collectstatic --noinput && gunicorn mini_mural.wsgi --bind 0.0.0.0:8000 --workers 3"]
+# A cada partida, em ordem:
+# 1. migrate cria ou atualiza as tabelas do auth e das sessões;
+# 2. carregar_esquema cria a tabela recados e os exemplos, só na primeira vez,
+#    porque ela depende de auth_user;
+# 3. collectstatic copia os estáticos para o volume que o nginx lê;
+# 4. o Gunicorn liga.
+CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py carregar_esquema --se-ausente --exemplos && python manage.py collectstatic --noinput && gunicorn mini_mural.wsgi --bind 0.0.0.0:8000 --workers 3"]

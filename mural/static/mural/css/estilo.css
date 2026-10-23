@@ -208,3 +208,65 @@ legend { padding: 0; }
 .opcao:has(input:checked) {
     border: 2px solid var(--cor-acao);
 }
+/* Caixa "Público" no formulário de recado */
+.novo-recado .caixa {
+    display: flex;
+    align-items: center;
+    gap: var(--espaco-sm);
+    min-height: var(--alvo-minimo);
+    font-weight: 400;
+    cursor: pointer;
+}
+
+.caixa input {
+    width: 20px;
+    height: 20px;
+}
+
+/* Formulários de login e de cadastro */
+.formulario label { font-weight: 700; }
+
+.formulario input {
+    width: 100%;
+    min-height: var(--alvo-minimo);
+    padding: var(--espaco-sm);
+    border: 1px solid var(--cor-borda);
+    border-radius: var(--raio-md);
+    font: inherit;
+}
+
+.formulario input[aria-invalid="true"] {
+    border-color: var(--cor-alerta);
+}
+
+/* Nome do usuário e botão Sair, no fim da navegação */
+.sessao {
+    display: flex;
+    align-items: center;
+    gap: var(--espaco-sm);
+    margin-left: auto;
+}
+
+.botao-texto {
+    min-height: var(--alvo-minimo);
+    padding: 0 var(--espaco-sm);
+    border: 0;
+    background: none;
+    color: var(--cor-acao);
+    font: inherit;
+    cursor: pointer;
+}
+
+.botao-texto:hover { text-decoration: underline; }
+
+/* Listas de erro que o Django escreve nos formulários de login e cadastro */
+.errorlist {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.formulario .apoio ul {
+    margin: var(--espaco-xs) 0 0;
+    padding-left: var(--espaco-md);
+}
