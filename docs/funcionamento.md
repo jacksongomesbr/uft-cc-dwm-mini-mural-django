@@ -22,15 +22,16 @@ Nos dois casos, a porta de entrada do Django é a `application` de
 `mini_mural/wsgi.py`, e o código do projeto é o mesmo.
 
 O navegador nunca fala com o banco. Todo acesso a dados passa pelo Django, e é
-nele que mora a regra de negócio: só quem entrou publica e arquiva, o texto do
-recado tem de 1 a 280 caracteres, todo recado nasce publicado e privado, e só
-um recado publicado pode ser arquivado.
+nele que mora a regra de negócio: só quem entrou publica, só o autor arquiva o
+próprio recado, o texto do recado tem de 1 a 280 caracteres, todo recado nasce
+publicado e privado, e só um recado publicado pode ser arquivado.
 
 ## Funcionalidades
 
 São seis funcionalidades: criar conta e entrar, publicar, listar, abrir o
 detalhe, arquivar e escolher a ordem do mural. Todas exigem login, menos a
-leitura de um recado público.
+leitura dos recados públicos ainda publicados, que qualquer pessoa vê na página
+inicial e no endereço de cada um.
 
 ```mermaid
 flowchart LR
@@ -47,12 +48,12 @@ flowchart LR
         F1["Publicar recado"]
         F2["Ver a lista de recados"]
         F3["Ver o resumo: publicados e arquivados"]
-        F4["Arquivar recado pela lista"]
+        F4["Arquivar o próprio recado pela lista"]
     end
 
     subgraph detalhe ["Detalhe: /recado/N/"]
         F5["Ver o texto completo, data e hora"]
-        F6["Arquivar recado pelo detalhe"]
+        F6["Arquivar o próprio recado pelo detalhe"]
         F7["Ver aviso de recado não encontrado"]
     end
 
@@ -63,7 +64,8 @@ flowchart LR
 
     V --> C1
     V --> C2
-    V -. "só recado público, sem arquivar" .-> F5
+    V --> P1["Ver a lista de recados públicos: /"]
+    P1 -- "clique no texto" --> F5
     C1 -. "já entra na conta" .-> U
     C2 --> U
     U --> C3
@@ -86,16 +88,17 @@ O arquivo `mural/urls.py` liga cada endereço a uma view de `mural/views.py`.
 
 | Endereço | Método | Login | View | O que faz | Resposta |
 |---|---|---|---|---|---|
-| `/` | GET | Sim | `mural` | Mostra o formulário, o resumo e a lista na ordem do cookie | 200 com HTML |
+| `/` | GET | Não | `mural` | Com login, mostra o formulário, o resumo e a lista na ordem do cookie; sem login, só os recados públicos ainda publicados | 200 com HTML |
 | `/` | POST | Sim | `mural` | Valida e grava um recado novo, público ou privado | 303 para `/` se válido, 422 com a página e a mensagem se inválido |
 | `/recado/N/` | GET | Só para recado privado | `recado` | Mostra um recado | 200, ou 404 se o recado não existe |
-| `/recado/N/arquivar/` | POST | Sim | `arquivar` | Arquiva o recado `N` | 303 para a lista ou para o detalhe; 405 se chegar por GET |
+| `/recado/N/arquivar/` | POST | Sim, e só o autor | `arquivar` | Arquiva o recado `N` e grava o instante | 303 para a lista ou para o detalhe; 403 se quem pede não é o autor; 405 se chegar por GET |
 | `/sobre/` | GET e POST | Sim | `sobre` | Mostra e grava a ordem no cookie | 200; 303 para `/sobre/?salvo=1` depois de gravar |
 | `/entrar/` | GET e POST | Não | `Entrar` (`LoginView`) | Mostra o formulário e confere usuário e senha | 302 para `next` ou `/` se conferem, 422 se não |
 | `/cadastro/` | GET e POST | Não | `cadastro` | Cria a conta e já entra nela | 303 para `/` se criou, 422 com as mensagens se não |
 | `/sair/` | POST | Sim | `LogoutView` | Apaga a sessão | 302 para `/entrar/`; 405 se chegar por GET |
 
-Uma view com `@login_required` responde 302 para `/entrar/?next=` seguido do
+Quem não entrou e manda um POST para `/` vai para a tela de entrar. Uma view
+com `@login_required` responde 302 para `/entrar/?next=` seguido do
 endereço pedido, e o login devolve a pessoa a esse endereço.
 
 Um endereço sem rota, como `/recado/abc/` ou `/qualquer-coisa`, recebe 404 do
@@ -221,10 +224,12 @@ sequenceDiagram
 
 ### Arquivar um recado
 
-O botão "Arquivar" é um formulário que envia POST para `/recado/N/arquivar/`.
-Arquivar muda dados, por isso usa POST: um link comum seria um GET, e um GET
-pode ser disparado por um buscador ou por uma pré-carga do navegador. O
-decorador `@require_POST` responde 405 a qualquer outro método.
+O botão "Arquivar" é um formulário que envia POST para `/recado/N/arquivar/`, e
+só aparece para o autor do recado. Arquivar muda dados, por isso usa POST: um
+link comum seria um GET, e um GET pode ser disparado por um buscador ou por uma
+pré-carga do navegador. O decorador `@require_POST` responde 405 a qualquer
+outro método. Como um POST pode ser montado à mão, sem o botão, a view confere
+o autor de novo antes de gravar.
 
 ```mermaid
 sequenceDiagram
@@ -234,9 +239,14 @@ sequenceDiagram
     participant D as Django: views.arquivar
     participant B as PostgreSQL
 
-    U->>N: clica em Arquivar
+    U->>N: clica em Arquivar, no próprio recado
     N->>D: POST /recado/4/arquivar/ com o token CSRF
-    D->>B: UPDATE recados SET status = arquivado WHERE id = 4 AND status = publicado
+    D->>B: SELECT ... WHERE recados.id = 4
+    B-->>D: o recado, com autor_id
+    alt quem pede não é o autor
+        D-->>N: 403 com Só quem publicou o recado pode arquivá-lo.
+    end
+    D->>B: UPDATE recados SET status = arquivado, arquivado_em = now() WHERE id = 4 AND autor_id = ... AND status = publicado
     B-->>D: 1 linha alterada, ou 0 se já estava arquivado
     alt veio da lista
         D-->>N: 303, Location: / com a âncora do recado
@@ -335,23 +345,28 @@ sequenceDiagram
     end
 ```
 
-### Recado público e recado privado sem login
+### Recados públicos sem login
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor V as Visitante sem login
     participant N as Navegador
-    participant D as Django: views.recado
+    participant D as Django: views.mural e views.recado
     participant B as PostgreSQL
 
-    V->>N: abre o endereço de um recado
+    V->>N: abre http://localhost:8081/
+    N->>D: GET / sem login, atendido por views.mural
+    D->>B: SELECT ... WHERE publico AND status = publicado
+    B-->>D: só os recados públicos ainda publicados
+    D-->>N: 200 com a lista, sem formulário e sem botões
+    V->>N: clica em um recado, ou abre o endereço dele
     N->>D: GET /recado/N/
     D->>B: SELECT ... FROM recados INNER JOIN auth_user WHERE recados.id = N
-    B-->>D: o recado, com publico e autor
-    alt recado público
+    B-->>D: o recado, com publico, status e autor
+    alt público e publicado (leitura_publica)
         D-->>N: 200 com o recado, sem o botão de arquivar
-    else recado privado
+    else privado ou arquivado
         D-->>N: 302, Location: /entrar/?next=/recado/N/
     end
 ```
@@ -387,6 +402,7 @@ A tabela liga cada risco ao cuidado que o evita e ao lugar onde ele está.
 | Formulário enviado por outro site (CSRF) | `CsrfViewMiddleware` e `{% csrf_token %}` em todo formulário | `settings.py` e templates |
 | Redirecionamento para site externo | O destino depois de arquivar sai de duas opções fixas, nunca do pedido | `views.arquivar` |
 | Mudança de dados por link | Publicar e salvar a ordem só gravam em POST; arquivar tem `@require_POST`, e a `LogoutView` só aceita POST | `mural/views.py` e `mural/urls.py` |
+| Arquivar recado de outra pessoa | A view confere o autor e responde 403; o `UPDATE` repete o filtro por autor | `views.arquivar` e `arquivar_recado()` |
 | Senha vazada do banco | `auth_user` guarda só o hash PBKDF2, com sal | `django.contrib.auth` |
 | Fixação de sessão | O login troca o identificador da sessão | `django.contrib.auth` |
 | Redirecionamento externo depois do login | A `LoginView` só segue um `next` do próprio site | `views.Entrar` |

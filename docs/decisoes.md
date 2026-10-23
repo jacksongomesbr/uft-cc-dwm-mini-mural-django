@@ -256,6 +256,9 @@ nota que aponta para a nova, e a nova entra no fim do documento.
 
 ### D18. Arquivar é repetível
 
+> **Revista na etapa 4 (D28):** continua repetível para o autor. Para outro
+> usuário, a view responde 403 antes de chegar ao `UPDATE`.
+
 - **Decisão:** a consulta de arquivar filtra `status='publicado'`. Arquivar
   duas vezes, ou arquivar um id que não existe, não altera nada e redireciona
   normalmente.
@@ -373,6 +376,9 @@ nota que aponta para a nova, e a nova entra no fim do documento.
 
 ### D25. Tudo exige login, menos o recado público
 
+> **Revista na etapa 4 (D27 e D28):** a página inicial mostra a lista dos
+> recados públicos a quem não entrou, e só o autor arquiva.
+
 - **Decisão:** mural, Sobre, publicar e arquivar levam `@login_required`, que
   manda quem não entrou para `/entrar/?next=...`. A exceção é o detalhe de um
   recado marcado como público, que qualquer pessoa lê pelo endereço, sem botão
@@ -406,3 +412,56 @@ nota que aponta para a nova, e a nova entra no fim do documento.
 - **Consequência aceita:** o projeto tem um comando próprio para manter. Sem
   `--se-ausente`, ele apaga os recados, como o `schema.sql` sempre fez; no
   Docker, uma mudança no esquema só vale depois de `docker compose down -v`.
+
+## Autoria e recados públicos (etapa 4)
+
+### D27. Página inicial com os recados públicos para quem não entrou
+
+- **Decisão:** a view `mural` deixou de ter `@login_required`. Para quem não
+  entrou, ela desenha `recados_publicos.html` com os recados públicos ainda
+  publicados, só para leitura. Quem entrou continua vendo o mural completo no
+  mesmo endereço. Um recado público arquivado sai da vista pública: some da
+  lista e o endereço dele passa a pedir login (`leitura_publica`).
+- **Alternativa descartada:** uma view e um endereço separados, como
+  `/publicos/`, com `/` ainda pedindo login.
+- **Motivo:** a regra é que os recados públicos fiquem visíveis para todos, e o
+  primeiro endereço que alguém abre é `/`. Mostrar a lista ali evita que o
+  visitante caia na tela de login sem saber que há algo para ler. O arquivado
+  sai da vista porque arquivar é tirar o recado do mural.
+- **Consequência aceita:** a view `mural` testa `request.user.is_authenticated`
+  logo no começo e tem dois caminhos. Um POST de quem não entrou vai para a
+  tela de entrar com `redirect_to_login`.
+
+### D28. Só o autor arquiva, conferido na view e no banco
+
+- **Decisão:** o botão "Arquivar" só aparece para o autor
+  (`pode_ser_arquivado_por()` no detalhe, `recado.autor_id == user.id` na
+  lista). A view `arquivar` busca o recado e responde 403, com `proibido.html`,
+  se quem pede não é o autor. O `update()` de `arquivar_recado()` filtra também
+  por autor.
+- **Alternativa descartada:** só esconder o botão, ou só filtrar no `update()`
+  e redirecionar sem aviso quando nada muda.
+- **Motivo:** esconder o botão não impede um POST montado à mão. Filtrar só no
+  `update()` impediria a mudança, mas a pessoa receberia o mesmo
+  redirecionamento de um arquivamento bem-sucedido. O 403 diz o que aconteceu,
+  e o filtro no banco protege mesmo que uma view nova esqueça a conferência.
+- **Consequência aceita:** arquivar faz duas consultas, uma para buscar o
+  recado e outra para alterá-lo. A regra aparece em três lugares (modelo,
+  template da lista e view), e uma mudança nela pede revisar os três.
+
+### D29. Instante do arquivamento em `arquivado_em`, amarrado ao status
+
+- **Decisão:** a coluna `arquivado_em timestamptz` recebe `NOW()` no
+  arquivamento e fica vazia enquanto o recado está publicado. O `CHECK
+  recado_arquivado_com_data` exige que as duas colunas concordem. No modelo, o
+  campo é `DateTimeField(null=True)`.
+- **Alternativa descartada:** uma tabela de histórico, com cada mudança de
+  status, ou trocar a coluna `status` por `arquivado_em` e deduzir o status da
+  data.
+- **Motivo:** o mural só tem uma mudança de estado, e uma coluna basta. Manter
+  `status` evita reescrever as consultas e o `CHECK` das etapas anteriores, e o
+  novo `CHECK` impede que as duas colunas se contradigam.
+- **Consequência aceita:** status e data guardam a mesma informação de dois
+  jeitos, e o banco confere a coerência. Como o `carregar_esquema --se-ausente`
+  não recria uma tabela que já existe, um banco da etapa 3 precisa ser recriado
+  para ganhar a coluna.

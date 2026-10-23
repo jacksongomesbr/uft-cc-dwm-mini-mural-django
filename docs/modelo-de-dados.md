@@ -28,6 +28,7 @@ erDiagram
         text status "publicado ou arquivado, padrão publicado"
         integer autor_id FK "usuário que publicou"
         boolean publico "padrão false (privado)"
+        timestamptz arquivado_em "instante do arquivamento, vazio se publicado"
     }
     DJANGO_SESSION {
         varchar session_key PK "valor do cookie sessionid"
@@ -57,7 +58,13 @@ O que fica fora do banco também faz parte do estado da aplicação:
 | `criado_em` | `timestamptz` | Instante da gravação, com fuso | `DEFAULT now()` |
 | `status` | `text` | `publicado` ou `arquivado` | `DEFAULT 'publicado'` e o `CHECK` `recado_status_valido` |
 | `autor_id` | `integer` | Um usuário que existe; o tipo acompanha o de `auth_user.id` | `REFERENCES auth_user (id)`; a view grava `request.user` |
-| `publico` | `boolean` | `true` deixa ler sem login | `DEFAULT false`; a view grava a caixa "Público" do formulário |
+| `publico` | `boolean` | `true` deixa ler sem login enquanto o recado está publicado | `DEFAULT false`; a view grava a caixa "Público" do formulário |
+| `arquivado_em` | `timestamptz` | Preenchido se e só se o recado está arquivado | `Now()` no `update()` de `arquivar_recado()` e o `CHECK` `recado_arquivado_com_data` |
+
+O `CHECK recado_arquivado_com_data` compara duas condições,
+`(status = 'arquivado') = (arquivado_em IS NOT NULL)`. Ele recusa um recado
+arquivado sem data e um recado publicado com data, então as duas colunas nunca
+se contradizem.
 
 O `REFERENCES` impede apagar um usuário que tem recados. O índice
 `recados_criado_em` atende ao `ORDER BY criado_em` da lista. Com três recados
@@ -79,7 +86,13 @@ do próprio `django.contrib.auth`, com tabela criada pelo `migrate`.
 | `status = TextField(db_default='publicado')` | `status text` | Idem; as constantes `Recado.PUBLICADO` e `Recado.ARQUIVADO` evitam escrever o texto solto no código |
 | `autor = ForeignKey(AUTH_USER_MODEL, on_delete=PROTECT)` | `autor_id integer` | O Django acrescenta `_id` ao nome do campo para achar a coluna |
 | `publico = BooleanField(db_default=False)` | `publico boolean` | |
+| `arquivado_em = DateTimeField(null=True)` | `arquivado_em timestamptz` | `None` enquanto o recado está publicado |
 | `Meta.db_table = 'recados'` | nome da tabela | Sem isso, o Django procuraria `mural_recado` |
+
+O modelo tem ainda duas regras sem banco: `leitura_publica`, verdadeira para
+recado público e publicado, e `pode_ser_arquivado_por(usuario)`, verdadeira só
+para o autor de um recado publicado. Views e templates usam as duas para decidir
+quem lê e quem vê o botão de arquivar.
 
 Quando o `schema.sql` muda, o modelo muda junto, à mão. Nada no projeto confere
 se os dois concordam.
@@ -87,12 +100,14 @@ se os dois concordam.
 ## Ciclo de vida de um recado
 
 Um recado só anda em uma direção: a aplicação não oferece desarquivar nem
-apagar. O campo `publico` é decidido na publicação e não muda depois.
+apagar. O campo `publico` é decidido na publicação e não muda depois. Só o
+autor arquiva, e o arquivamento grava o instante em `arquivado_em`. Um recado
+público arquivado deixa de ser lido sem login.
 
 ```mermaid
 stateDiagram-v2
     [*] --> publicado: POST / com texto válido (INSERT)
-    publicado --> arquivado: POST /recado/N/arquivar/ (UPDATE)
+    publicado --> arquivado: POST /recado/N/arquivar/ pelo autor (UPDATE com arquivado_em = now())
     arquivado --> arquivado: arquivar de novo não altera nada
 ```
 
@@ -106,9 +121,10 @@ separados do texto da consulta, como parâmetros, representados por `%s`.
 |---|---|---|
 | `listar_recados('mais-recentes')` | `Recado.objects.select_related('autor').order_by('-criado_em', '-id')` | `SELECT recados.*, auth_user.* FROM recados INNER JOIN auth_user ON recados.autor_id = auth_user.id ORDER BY criado_em DESC, id DESC` |
 | `listar_recados('mais-antigos')` | o mesmo, com `order_by('criado_em', 'id')` | `... ORDER BY criado_em ASC, id ASC` |
+| `listar_recados_publicos(ordem)` | o mesmo, com `.filter(publico=True, status='publicado')` | `... WHERE publico AND status = 'publicado' ORDER BY ...` |
 | `buscar_recado(id)` | `Recado.objects.select_related('autor').filter(id=id).first()` | `... WHERE recados.id = %s ORDER BY recados.id ASC LIMIT 1` |
 | `publicar_recado(texto, autor, publico)` | `Recado.objects.create(texto=texto, autor=autor, publico=publico)` | `INSERT INTO recados (texto, criado_em, status, autor_id, publico) VALUES (%s, DEFAULT, DEFAULT, %s, %s) RETURNING id, criado_em, status, publico` |
-| `arquivar_recado(id)` | `Recado.objects.filter(id=id, status='publicado').update(status='arquivado')` | `UPDATE recados SET status = 'arquivado' WHERE id = %s AND status = 'publicado'` |
+| `arquivar_recado(id, autor)` | `Recado.objects.filter(id=id, autor=autor, status='publicado').update(status='arquivado', arquivado_em=Now())` | `UPDATE recados SET status = 'arquivado', arquivado_em = NOW() WHERE id = %s AND autor_id = %s AND status = 'publicado'` |
 
 O `select_related('autor')` traz o autor na mesma consulta, com um `JOIN`. Sem
 ele, o template faria uma consulta a mais por recado ao mostrar o nome. As

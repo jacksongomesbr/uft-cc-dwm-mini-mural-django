@@ -22,8 +22,9 @@ O Mini Mural é uma aplicação web em que o servidor monta cada página. O
 navegador pede um endereço, o nginx ou o Apache entrega o pedido ao Django, a
 view consulta o PostgreSQL pelo ORM e devolve HTML montado por um template.
 Publicar, arquivar e escolher a ordem são formulários comuns enviados por POST,
-seguidos de um redirecionamento. O login usa o `django.contrib.auth`, e todo o mural
-exige login, menos a leitura de um recado marcado como público. O JavaScript só melhora o formulário de
+seguidos de um redirecionamento. O login usa o `django.contrib.auth`. Quem não entrou
+vê só os recados públicos ainda publicados; o resto exige login, e só o autor
+arquiva o próprio recado. O JavaScript só melhora o formulário de
 recado; sem ele, tudo continua funcionando. O projeto usa do Django só o
 essencial (URLs, views, templates, ORM, estáticos, CSRF e autenticação) para que cada parte
 do caminho fique visível. Para rodar na própria máquina sem instalar Python e

@@ -14,13 +14,14 @@ sem instalar Python, servidor web e PostgreSQL, use o
 
 ## Funcionalidades
 
-- Criar conta, entrar e sair. Todo o mural exige login.
+- Ver, sem login, a lista dos recados públicos ainda publicados.
+- Criar conta, entrar e sair. O resto do mural exige login.
 - Publicar um recado de até 280 caracteres, com contador e aviso de erro. O
-  recado nasce privado; marcado como público, ele pode ser lido sem login, pelo
-  endereço dele.
+  recado nasce privado; marcado como público, ele aparece para quem não entrou.
 - Ver a lista de recados com hora, autor e o resumo de publicados e arquivados.
 - Abrir o detalhe de um recado, com data e hora por extenso.
-- Arquivar um recado pela lista ou pelo detalhe.
+- Arquivar o próprio recado pela lista ou pelo detalhe. Só o autor arquiva, e a
+  data e a hora do arquivamento ficam gravadas.
 - Escolher, em Sobre, a ordem do mural, guardada no navegador.
 
 Como cada uma funciona, e por quê, está em [docs/](docs/README.md).
@@ -35,6 +36,7 @@ etapa, e o `main` sempre aponta para a mais recente.
 | `etapa-1-monolito` | 1: Monólito | Mural sem login, instalado direto com nginx e Gunicorn, ou Apache e mod_wsgi, e PostgreSQL. |
 | `etapa-2-docker` | 2: Docker | O mesmo mural, com um `compose.yaml` para rodar na própria máquina. |
 | `etapa-3-login` | 3: Login | Cadastro, login e saída com `django.contrib.auth`; todo o mural exige login, e o recado pode ser público. |
+| `etapa-4-autoria` | 4: Autoria | Só o autor arquiva, a data do arquivamento fica gravada, e a página inicial mostra os recados públicos a quem não entrou. |
 | `main` | (a mais recente) | Igual ao ramo da etapa mais recente. |
 
 Para estudar uma etapa, troque de ramo, por exemplo `git switch etapa-1-monolito`.
@@ -375,30 +377,38 @@ Rode os testes das regras, que não precisam de banco nem de servidor:
 
 Com o site no ar, exercite o mural no navegador:
 
-1. Abra <http://localhost:8081>. Sem login, o navegador vai para a tela de
-   entrar.
+1. Abra <http://localhost:8081>. Sem login, aparece a lista dos recados
+   públicos, sem formulário nem botões.
 2. Crie uma conta em "Criar conta". Um nome que já existe, mesmo com outras
    maiúsculas, ou uma senha fraca, como `12345678`, mostram a mensagem no campo.
 3. Clique em Publicar com o campo vazio. A mensagem aparece e o foco volta ao
    campo.
 4. Publique um recado privado e outro com a caixa "Público" marcada. Os dois
    aparecem no topo da lista com o seu nome.
-5. Arquive um recado pela lista e outro pelo detalhe. Os dois passam a mostrar
-   "Arquivado".
+5. Arquive um recado seu pela lista e outro pelo detalhe. Os dois passam a
+   mostrar "Arquivado", com a hora; o detalhe mostra a data e a hora completas.
+   Nos recados de outro usuário, como os do `exemplo`, o botão "Arquivar" não
+   aparece.
 6. Em Sobre, escolha "Mais antigos primeiro", salve e volte ao Mural. A ordem se
    inverte e continua assim depois de recarregar.
-7. Clique em Sair e abra o endereço do recado público. Ele aparece sem o botão
-   de arquivar. O endereço do recado privado leva à tela de entrar.
+7. Clique em Sair. A página inicial mostra o recado público que você publicou,
+   e o endereço dele abre sem login. O endereço do recado privado, e o de um
+   público que você arquivou, levam à tela de entrar.
 
 O login diferencia maiúsculas de minúsculas no nome de usuário: a conta
 `exemplo` não entra como `Exemplo`. O cadastro, por outro lado, recusa um nome
 que só difere de outro nas maiúsculas.
 
-Confira também pelo terminal. Sem login, o mural responde `302`, um
-redirecionamento para a tela de entrar:
+Confira também pelo terminal. Sem login, a página inicial responde `200`, com a
+lista de recados públicos, e Sobre responde `302`, um redirecionamento para a
+tela de entrar:
 
 ```bash
-curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' http://localhost:8081/
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8081/
+```
+
+```bash
+curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' http://localhost:8081/sobre/
 ```
 
 Com os exemplos carregados, o recado 3 é público e responde `200` sem login:
@@ -446,7 +456,7 @@ mini-mural/
 │   ├── tests.py             # Testes das regras sem banco
 │   ├── management/commands/
 │   │   └── carregar_esquema.py  # Roda o schema.sql e o seed.sql
-│   ├── templates/           # Páginas, login, cadastro, 404 e 500
+│   ├── templates/           # Páginas, recados públicos, login, cadastro, 403, 404 e 500
 │   └── static/mural/        # CSS e JavaScript
 ├── servidor/
 │   ├── nginx.conf           # Site para nginx na frente do Gunicorn
@@ -478,6 +488,7 @@ O detalhe de quase todo erro está no log. Com Gunicorn, leia
 | `Bad Request (400)` | O nome do site não está em `ENDERECOS_ACEITOS` | Acrescente o nome no `config.py` e reinicie |
 | `502 Bad Gateway` (nginx) | O Gunicorn não está rodando | Leia `sudo journalctl -u mini-mural`; a causa mais comum é falta do `config.py` |
 | Página sem estilo | O `collectstatic` não rodou, ou o `alias` aponta para outra pasta | Rode o passo 7 e confira o caminho de `/static/` |
+| Página "Ação não permitida" ao arquivar (403) | O recado é de outro usuário | Só o autor arquiva; entre com a conta de quem publicou |
 | `403 Forbidden` ao enviar um formulário | O POST chegou sem o token CSRF, ou o token mudou depois do login | Recarregue a página antes de enviar; o formulário precisa do `{% csrf_token %}` |
 | Mudança no código não aparece | O Gunicorn ou o Apache ainda usam o código antigo | Veja "Depois de mudar o código" |
 | `Cannot connect to the Docker daemon` (Docker) | O Docker não está ligado | Abra o Docker Desktop, ou ligue o serviço do Docker |

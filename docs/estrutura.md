@@ -34,7 +34,7 @@ flowchart TD
     app --> preferencias["preferencias.py: cookie da ordem"]
     app --> views["views.py: mural, login e cadastro"]
     app --> urlsa["urls.py: endereços"]
-    app --> templates["templates/: páginas, login, cadastro, 404 e 500"]
+    app --> templates["templates/: páginas, recados públicos, login, cadastro, 403, 404 e 500"]
     app --> comando["management/commands/carregar_esquema.py"]
     app --> static["static/mural/: CSS e JavaScript"]
     app --> tests["tests.py: regras sem banco"]
@@ -95,13 +95,13 @@ flowchart LR
 | `mini_mural/settings.py` | Apps, middlewares, banco, fuso, estáticos, log, endereços de login e regras de senha, com os valores locais lidos de `config.py` | Entra um app, um middleware ou uma configuração |
 | `mini_mural/urls.py` | Inclui as rotas do app `mural` | Entra outro app |
 | `mini_mural/wsgi.py` | A `application` que o Gunicorn e o mod_wsgi chamam | Raramente |
-| `mural/models.py` | O modelo `Recado`, com `managed = False`, autor e público | O `schema.sql` muda |
-| `mural/recados.py` | `listar_recados()`, `buscar_recado()`, `publicar_recado()`, `arquivar_recado()` e `resumir_recados()` | Uma consulta muda |
+| `mural/models.py` | O modelo `Recado`, com `managed = False`, autor, público, data do arquivamento e as regras `leitura_publica` e `pode_ser_arquivado_por()` | O `schema.sql` muda |
+| `mural/recados.py` | `listar_recados()`, `listar_recados_publicos()`, `buscar_recado()`, `publicar_recado()`, `arquivar_recado()` e `resumir_recados()` | Uma consulta muda |
 | `mural/validacao.py` | `validar_recado()`, `LIMITE_DO_RECADO` e `normalizar_quebras_de_linha()` | A regra do texto muda |
 | `mural/preferencias.py` | `ler_ordem()`, `salvar_ordem()` e a lista `ORDENS` | Surge outra preferência ou outra ordem |
 | `mural/views.py` | As views `mural`, `recado`, `arquivar`, `sobre` e `cadastro`, a classe `Entrar` e `redirecionar()` | O comportamento de uma página muda |
 | `mural/urls.py` | Os endereços do mural, de entrar, de sair e de cadastro, com seus nomes | Um endereço muda |
-| `mural/templates/mural/` | `base.html` com a navegação (que muda conforme o login), uma página por view, as telas `entrar.html` e `cadastro.html` e a página de recado ausente |
+| `mural/templates/mural/` | `base.html` com a navegação (que muda conforme o login), uma página por view, as telas `entrar.html` e `cadastro.html`, a lista `recados_publicos.html`, a página `proibido.html` (403) e a de recado ausente |
 | `mural/management/commands/carregar_esquema.py` | O comando que roda o `schema.sql` e, com `--exemplos`, cria o usuário `exemplo` e roda o `seed.sql` | A forma de carregar o esquema muda | O HTML de uma página muda |
 | `mural/templates/404.html` e `500.html` | Páginas de endereço inexistente e de erro do servidor | O texto dessas páginas muda |
 | `mural/static/mural/css/estilo.css` | Cores, espaços e tamanhos, definidos como variáveis CSS no topo | A aparência muda |
