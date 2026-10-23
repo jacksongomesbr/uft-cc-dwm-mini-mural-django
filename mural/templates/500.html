@@ -1,0 +1,22 @@
+{% extends 'mural/base.html' %}
+
+{% comment %}
+O Django usa este template quando uma exceção não é tratada, por exemplo com
+o banco desligado. O detalhe vai para o log (configurado em LOGGING, no
+settings.py), e a página não mostra nada interno. Só vale com DEBUG = False.
+{% endcomment %}
+
+{% block titulo %}Erro{% endblock %}
+
+{% block conteudo %}
+<h1>Algo deu errado</h1>
+<section class="cartao">
+    <p>O servidor não conseguiu atender a este pedido.</p>
+    <p class="apoio">
+        Se você está rodando o projeto, o motivo está no log do Gunicorn ou do
+        Apache. O mais comum é o PostgreSQL desligado ou o
+        <code>config.py</code> com usuário ou senha errados.
+    </p>
+    <a class="botao" href="{% url 'mural' %}">Voltar ao mural</a>
+</section>
+{% endblock %}

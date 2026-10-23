@@ -1,0 +1,27 @@
+{% extends 'mural/base.html' %}
+
+{% block titulo %}Recado{% endblock %}
+
+{% block conteudo %}
+<h1>Recado</h1>
+
+<section class="cartao {% if recado.arquivado %}arquivado{% endif %}">
+    <p class="texto-completo">{{ recado.texto }}</p>
+    {# O Django escreve o mês com maiúscula ("Março"); o lower deixa "março". #}
+    <time class="apoio" datetime="{{ recado.criado_em|date:'c' }}">
+        {{ recado.criado_em|date:'j \d\e F \d\e Y \à\s H:i'|lower }}
+    </time>
+
+    {% if recado.arquivado %}
+        <p class="etiqueta">Arquivado</p>
+    {% else %}
+        <form method="post" action="{% url 'arquivar' recado.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="voltar_para" value="detalhe">
+            <button type="submit" class="botao">Arquivar recado</button>
+        </form>
+    {% endif %}
+</section>
+
+<a href="{% url 'mural' %}">Ver todos os recados</a>
+{% endblock %}

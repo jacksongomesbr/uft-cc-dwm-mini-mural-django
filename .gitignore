@@ -1,0 +1,9 @@
+# Configuração local, com senha do banco e SECRET_KEY.
+config.py
+
+# Ambiente virtual e arquivos gerados.
+.venv/
+staticfiles/
+__pycache__/
+
+.DS_Store

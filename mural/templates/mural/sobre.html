@@ -1,0 +1,41 @@
+{% extends 'mural/base.html' %}
+
+{% block titulo %}Sobre{% endblock %}
+
+{% block conteudo %}
+<h1>Sobre o Mini Mural</h1>
+
+<section class="cartao">
+    <p>
+        Um mural de recados construído na disciplina de Desenvolvimento
+        WebMobile, como aplicação web em Python e Django com PostgreSQL.
+    </p>
+    <p class="apoio">
+        Os recados ficam no banco de dados e são os mesmos para todo navegador
+        que abrir o mural. A ordem escolhida abaixo fica guardada só neste
+        navegador.
+    </p>
+</section>
+
+<form class="cartao" method="post" action="{% url 'sobre' %}">
+    {% csrf_token %}
+    <fieldset>
+        <legend><h2>Ordem do mural</h2></legend>
+
+        {% for valor, rotulo in ordens.items %}
+            <label class="opcao">
+                <input type="radio" name="ordem" value="{{ valor }}"
+                       {% if valor == ordem %}checked{% endif %}>
+                {{ rotulo }}
+            </label>
+        {% endfor %}
+    </fieldset>
+
+    <button type="submit" class="botao">Salvar ordem</button>
+
+    <p class="apoio" aria-live="polite">{% if salvo %}Preferência salva.{% endif %}</p>
+    {% if erro %}
+        <p class="erro" aria-live="polite">{{ erro }}</p>
+    {% endif %}
+</form>
+{% endblock %}

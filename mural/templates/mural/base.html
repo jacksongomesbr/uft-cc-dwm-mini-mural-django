@@ -1,0 +1,21 @@
+{% load static %}<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block titulo %}{% endblock %} · Mini Mural</title>
+    <link rel="stylesheet" href="{% static 'mural/css/estilo.css' %}">
+</head>
+<body>
+    <header class="topo">
+        <nav class="coluna navegacao" aria-label="Principal">
+            <a href="{% url 'mural' %}" {% if pagina_atual == 'mural' %}aria-current="page"{% endif %}>Mural</a>
+            <a href="{% url 'sobre' %}" {% if pagina_atual == 'sobre' %}aria-current="page"{% endif %}>Sobre</a>
+        </nav>
+    </header>
+    <main class="coluna">
+        {% block conteudo %}{% endblock %}
+    </main>
+    <script src="{% static 'mural/js/mural.js' %}" defer></script>
+</body>
+</html>

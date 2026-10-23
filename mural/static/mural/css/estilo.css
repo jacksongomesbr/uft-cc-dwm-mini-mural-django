@@ -1,0 +1,210 @@
+/* Cores, espaços e tamanhos usados em todas as páginas. */
+:root {
+    --cor-fundo: #f5f5f4;
+    --cor-superficie: #ffffff;
+    --cor-borda: #d6d3d1;
+    --cor-texto: #1c1917;
+    --cor-texto-apoio: #57534e;
+    --cor-acao: #1d4ed8;
+    --cor-acao-texto: #ffffff;
+    --cor-alerta: #b45309;
+
+    --espaco-xs: 4px;
+    --espaco-sm: 8px;
+    --espaco-md: 16px;
+    --espaco-lg: 24px;
+
+    --raio-md: 8px;
+    --raio-lg: 12px;
+
+    /* Alvo de toque mínimo, como os 48 dp do Android. */
+    --alvo-minimo: 48px;
+    --largura-maxima: 640px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: var(--cor-fundo);
+    color: var(--cor-texto);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 16px;
+    line-height: 1.4;
+}
+
+h1 { font-size: 28px; margin: var(--espaco-md) 0 var(--espaco-sm); }
+h2 { font-size: 20px; margin: var(--espaco-sm) 0; }
+
+/* Coluna central com largura máxima, igual em celular e computador. */
+.coluna {
+    width: 100%;
+    max-width: var(--largura-maxima);
+    margin: 0 auto;
+    padding: 0 var(--espaco-md) var(--espaco-lg);
+}
+
+.topo {
+    background: var(--cor-superficie);
+    border-bottom: 1px solid var(--cor-borda);
+}
+
+.navegacao {
+    display: flex;
+    gap: var(--espaco-sm);
+    padding-bottom: 0;
+}
+
+.navegacao a {
+    display: flex;
+    align-items: center;
+    min-height: var(--alvo-minimo);
+    padding: 0 var(--espaco-md);
+    color: var(--cor-texto-apoio);
+    text-decoration: none;
+    border-bottom: 3px solid transparent;
+}
+
+.navegacao a[aria-current="page"] {
+    color: var(--cor-acao);
+    border-bottom-color: var(--cor-acao);
+    font-weight: 700;
+}
+
+.cartao {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espaco-sm);
+    padding: var(--espaco-md);
+    background: var(--cor-superficie);
+    border: 1px solid var(--cor-borda);
+    border-radius: var(--raio-lg);
+    margin-bottom: var(--espaco-sm);
+}
+
+.cartao.arquivado {
+    background: var(--cor-fundo);
+}
+
+.linha {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--espaco-sm);
+}
+
+.botao {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--alvo-minimo);
+    padding: 0 var(--espaco-md);
+    border: 0;
+    border-radius: var(--raio-md);
+    background: var(--cor-acao);
+    color: var(--cor-acao-texto);
+    font: inherit;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    align-self: flex-start;
+}
+
+.botao:hover { opacity: 0.9; }
+.botao:active { opacity: 0.85; }
+
+:focus-visible {
+    outline: 3px solid var(--cor-acao);
+    outline-offset: 2px;
+}
+
+.apoio { font-size: 14px; color: var(--cor-texto-apoio); margin: 0; }
+.erro { font-size: 14px; color: var(--cor-alerta); margin: 0; }
+.erro:empty { display: none; }
+.etiqueta { font-size: 14px; color: var(--cor-texto-apoio); font-style: italic; margin: 0; }
+.vazio { color: var(--cor-texto-apoio); font-style: italic; }
+
+/* Formulário de recado novo */
+.novo-recado label { font-weight: 700; }
+
+.novo-recado textarea {
+    width: 100%;
+    min-height: calc(var(--alvo-minimo) * 2);
+    padding: var(--espaco-sm);
+    border: 1px solid var(--cor-borda);
+    border-radius: var(--raio-md);
+    font: inherit;
+    resize: vertical;
+}
+
+.novo-recado textarea[aria-invalid="true"] {
+    border-color: var(--cor-alerta);
+}
+
+.perto-do-limite {
+    color: var(--cor-alerta);
+    font-weight: 700;
+}
+
+.resumo {
+    display: flex;
+    gap: var(--espaco-md);
+    color: var(--cor-texto-apoio);
+}
+
+/* Lista de recados */
+.lista {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* Na lista, o texto aparece em no máximo duas linhas; o detalhe mostra tudo. */
+.texto-do-recado {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    min-height: var(--alvo-minimo);
+    color: var(--cor-texto);
+    text-decoration: none;
+    white-space: pre-line;
+}
+
+.texto-do-recado:hover { text-decoration: underline; }
+
+.texto-completo {
+    margin: 0;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+
+/* Página Sobre */
+fieldset {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--espaco-sm);
+}
+
+legend { padding: 0; }
+
+.opcao {
+    display: flex;
+    align-items: center;
+    gap: var(--espaco-sm);
+    min-height: var(--alvo-minimo);
+    padding: var(--espaco-sm);
+    border: 1px solid var(--cor-borda);
+    border-radius: var(--raio-md);
+    cursor: pointer;
+}
+
+.opcao:has(input:checked) {
+    border: 2px solid var(--cor-acao);
+}

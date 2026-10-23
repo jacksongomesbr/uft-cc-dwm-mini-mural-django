@@ -1,0 +1,30 @@
+# Gunicorn como serviço do systemd, para usar com servidor/nginx.conf.
+#
+# No Debian e no Ubuntu, copie para /etc/systemd/system/mini-mural.service e
+# ligue com:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now mini-mural
+#
+# O systemd liga o Gunicorn junto com a máquina e o religa se ele cair. Troque
+# /var/www/mini-mural pela pasta do projeto.
+
+[Unit]
+Description=Mini Mural (Gunicorn)
+After=network.target postgresql.service
+
+[Service]
+# Mesmo usuário do nginx, que só precisa ler a pasta do projeto.
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/mini-mural
+
+# Escuta só em 127.0.0.1: quem fala com o Gunicorn é o nginx, e não o
+# navegador. Três processos atendem pedidos em paralelo.
+ExecStart=/var/www/mini-mural/.venv/bin/gunicorn mini_mural.wsgi --bind 127.0.0.1:8000 --workers 3
+
+# Os erros do Django saem na saída de erro, que o systemd guarda no diário.
+# Leia com: sudo journalctl -u mini-mural
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
