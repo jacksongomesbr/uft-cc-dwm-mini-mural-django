@@ -276,13 +276,57 @@ A tabela liga cada risco ao cuidado que o evita e ao lugar onde ele está.
 | Mudança de dados por link | Publicar e salvar a ordem só gravam em POST; arquivar tem `@require_POST` | `mural/views.py` |
 | Cabeçalho `Host` forjado | `ALLOWED_HOSTS` recusa nomes fora da lista com 400 | `config.py` |
 
+## Com Docker
+
+O `compose.yaml` monta as mesmas partes em contêineres. O `web` faz o papel do
+servidor web, o `app` roda o Django no Gunicorn e o `banco` roda o PostgreSQL.
+O navegador continua falando só com o nginx, pela porta 8081 da sua máquina.
+
+```mermaid
+flowchart LR
+    navegador["Navegador"]
+
+    subgraph maquina ["Sua máquina"]
+        porta["localhost:8081"]
+        subgraph compose ["Rede do Compose"]
+            web["web: nginx, porta 80"]
+            app["app: Django no Gunicorn, porta 8000"]
+            banco[("banco: PostgreSQL, porta 5432")]
+        end
+        estaticos[("volume estaticos")]
+        dados[("volume dados")]
+    end
+
+    navegador --> porta
+    porta --> web
+    web -- "repassa para app:8000" --> app
+    web -. "lê /static/" .-> estaticos
+    app -. "collectstatic grava" .-> estaticos
+    app -- "host banco" --> banco
+    banco --- dados
+```
+
+Dentro da rede do Compose, cada serviço é encontrado pelo próprio nome. Por
+isso o `docker/nginx.conf` repassa os pedidos para `app:8000`, e o
+`docker/config.py` usa `banco` como endereço do PostgreSQL. Só a porta do nginx
+é publicada na sua máquina; o Gunicorn e o PostgreSQL ficam alcançáveis apenas
+de dentro da rede.
+
+Na primeira subida, com o volume `dados` vazio, a imagem do PostgreSQL cria o
+usuário e o banco `mini_mural` e executa os arquivos montados em
+`/docker-entrypoint-initdb.d`, primeiro o `schema.sql` e depois o `seed.sql`. O
+`app` só liga depois que o banco responde ao `pg_isready`, conferido pelo
+`healthcheck` do `compose.yaml`. Ao ligar, ele roda o `collectstatic`, que
+copia CSS e JavaScript para o volume `estaticos`, e então inicia o Gunicorn.
+
 ## Quando algo dá errado
 
 Uma exceção não tratada, como o banco desligado ou um SQL com defeito, faz o
 Django responder 500 com o template `500.html`, sem informação interna. O
 `LOGGING` de `settings.py` manda o rastro completo para a saída de erro, que
 vai para o diário do systemd (`journalctl -u mini-mural`) com Gunicorn, ou para
-o `mini-mural-erro.log` com Apache. Se a página "Algo deu errado" aparecer,
+o `mini-mural-erro.log` com Apache, ou para a saída do contêiner com Docker
+(`docker compose logs app`). Se a página "Algo deu errado" aparecer,
 leia o log.
 
 O `DEBUG = True` no `config.py` troca essas páginas pela página de depuração do

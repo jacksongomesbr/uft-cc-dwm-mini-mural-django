@@ -7,7 +7,8 @@ Desenvolvimento WebMobile (UFT), feita como um monólito simples:
 - Python e Django no servidor, usando só o essencial do framework;
 - PostgreSQL como banco, com o esquema em um arquivo SQL.
 
-Não há Docker, migrations nem etapa de build de front-end.
+Não há migrations nem etapa de build de front-end. Para rodar na sua máquina
+sem instalar Python, servidor web e PostgreSQL, use o [Docker](#rodar-com-docker).
 
 ## Funcionalidades
 
@@ -32,8 +33,66 @@ As duas funcionam igual para o projeto. A pasta `servidor/` tem a configuração
 pronta de cada uma, e a decisão D4, em [docs/decisoes.md](docs/decisoes.md),
 explica por que o projeto usa um servidor web de verdade.
 
-Os passos abaixo usam Debian ou Ubuntu, o sistema mais comum em servidores e
-nos laboratórios. A seção [No macOS](#no-macos) traz as diferenças.
+Os passos de instalação usam Debian ou Ubuntu, o sistema mais comum em
+servidores e nos laboratórios. A seção [No macOS](#no-macos) traz as
+diferenças.
+
+## Rodar com Docker
+
+O Docker sobe a aplicação em três contêineres: `web`, com o nginx; `app`, com o
+Django no Gunicorn; e `banco`, com o PostgreSQL. O nginx existe porque o
+Gunicorn não entrega os arquivos estáticos (decisão D21). Você precisa só do
+Docker com o Compose (Docker Desktop, ou Docker Engine com o plugin
+`compose`).
+
+Na pasta do projeto:
+
+```bash
+docker compose up --build
+```
+
+Quando o terminal mostrar o Gunicorn pronto, abra <http://localhost:8081>. Na
+primeira vez, o PostgreSQL roda o `sql/schema.sql` e o `sql/seed.sql`, e o
+mural já aparece com os recados de exemplo.
+
+O terminal fica preso mostrando os logs dos três contêineres, inclusive os
+erros do Django. Para parar, use Ctrl+C. Os comandos abaixo rodam em outro
+terminal, na mesma pasta.
+
+Para rodar os testes dentro do contêiner da aplicação:
+
+```bash
+docker compose exec app python manage.py test
+```
+
+Para desligar e remover os contêineres, mantendo os recados:
+
+```bash
+docker compose down
+```
+
+Para apagar também os recados e voltar aos exemplos na próxima subida:
+
+```bash
+docker compose down -v
+```
+
+Três detalhes mudam em relação à instalação direta:
+
+- **Configuração:** o contêiner usa `docker/config.py`, que lê a `SECRET_KEY` e
+  os dados do banco das variáveis de ambiente de `compose.yaml`. O seu
+  `config.py` local não entra na imagem. A senha e a chave de `compose.yaml`
+  servem só para a sua máquina.
+- **Mudança no código:** a imagem guarda uma cópia do código. Depois de mudar um
+  arquivo, inclusive CSS e JavaScript, rode `docker compose up --build` de novo.
+  O contêiner `app` roda o `collectstatic` a cada partida.
+- **Mudança no esquema:** o PostgreSQL só roda o `schema.sql` com o volume de
+  dados vazio. Depois de mudar o esquema, rode `docker compose down -v`, que
+  apaga os recados, e suba de novo.
+
+O `compose.yaml` serve só para desenvolvimento: a senha e a `SECRET_KEY`
+estão no próprio arquivo, e a conexão usa HTTP simples, sem HTTPS. A decisão D22, em
+[docs/decisoes.md](docs/decisoes.md), explica o que foi escolhido e por quê.
 
 ## Instalar no Debian ou no Ubuntu
 
@@ -321,6 +380,11 @@ mini-mural/
 ├── manage.py                # Linha de comando do Django
 ├── requirements.txt         # Django, psycopg e Gunicorn
 ├── config.exemplo.py        # Modelo da configuração; copie para config.py
+├── compose.yaml             # Serviços do Docker: web, app e banco
+├── docker/
+│   ├── Dockerfile           # Imagem com Python, Django e Gunicorn
+│   ├── nginx.conf           # Site do nginx dentro do contêiner
+│   └── config.py            # Configuração lida das variáveis de ambiente
 ├── mini_mural/              # Projeto: configuração e entrada WSGI
 │   ├── settings.py
 │   ├── urls.py
@@ -349,7 +413,8 @@ mini-mural/
 
 O detalhe de quase todo erro está no log. Com Gunicorn, leia
 `sudo journalctl -u mini-mural`; com Apache, leia
-`/var/log/apache2/mini-mural-erro.log`.
+`/var/log/apache2/mini-mural-erro.log`; com Docker, leia
+`docker compose logs app`.
 
 | Sintoma | Causa provável | O que fazer |
 |---|---|---|
@@ -361,3 +426,6 @@ O detalhe de quase todo erro está no log. Com Gunicorn, leia
 | Página sem estilo | O `collectstatic` não rodou, ou o `alias` aponta para outra pasta | Rode o passo 6 e confira o caminho de `/static/` |
 | `403 Forbidden` ao publicar | O POST chegou sem o token CSRF | Recarregue a página antes de enviar; o formulário precisa do `{% csrf_token %}` |
 | Mudança no código não aparece | O Gunicorn ou o Apache ainda usam o código antigo | Veja "Depois de mudar o código" |
+| `Cannot connect to the Docker daemon` (Docker) | O Docker não está ligado | Abra o Docker Desktop, ou ligue o serviço do Docker |
+| `port is already allocated` (Docker) | Outro programa já usa a porta 8081, como o nginx da instalação direta | Desligue o outro programa, ou troque `"8081:80"` em `compose.yaml` por outra porta |
+| Mudança no esquema não aparece (Docker) | O volume de dados já existia, e o PostgreSQL não roda o `schema.sql` de novo | `docker compose down -v` e suba outra vez |

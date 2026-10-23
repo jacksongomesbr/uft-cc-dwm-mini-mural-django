@@ -22,4 +22,5 @@ Publicar, arquivar e escolher a ordem são formulários comuns enviados por POST
 seguidos de um redirecionamento. O JavaScript só melhora o formulário de
 recado; sem ele, tudo continua funcionando. O projeto usa do Django só o
 essencial (URLs, views, templates, ORM, estáticos e CSRF) para que cada parte
-do caminho fique visível.
+do caminho fique visível. Para rodar na própria máquina sem instalar Python e
+PostgreSQL, há um `compose.yaml` com Docker (decisão D22).

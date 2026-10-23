@@ -19,6 +19,8 @@ flowchart TD
     raiz --> docs["docs/"]
     raiz --> config["config.py (local, fora do Git)"]
     raiz --> exemplo["config.exemplo.py"]
+    raiz --> compose["compose.yaml: serviços web, app e banco"]
+    raiz --> docker["docker/"]
     raiz --> req["requirements.txt"]
     raiz --> gerados[".venv/ e staticfiles/ (gerados, fora do Git)"]
 
@@ -39,6 +41,10 @@ flowchart TD
     servidor --> nginx["nginx.conf"]
     servidor --> service["mini-mural.service: Gunicorn"]
     servidor --> apache["apache.conf: mod_wsgi"]
+
+    docker --> dockerfile["Dockerfile: imagem do app"]
+    docker --> dnginx["nginx.conf: site no contêiner"]
+    docker --> dconfig["config.py: lê o ambiente"]
 
     sql --> schema["schema.sql"]
     sql --> seed["seed.sql"]
@@ -105,4 +111,9 @@ flowchart LR
 | `sql/schema.sql` | Tabela, restrições e índice | O modelo de dados muda |
 | `sql/seed.sql` | Os três recados de exemplo | Os exemplos mudam |
 | `config.exemplo.py` | Modelo da configuração local | Entra uma configuração nova |
+| `compose.yaml` | Os serviços `web`, `app` e `banco`, a porta 8081, as variáveis de ambiente e os volumes | Entra um serviço ou muda uma senha de desenvolvimento |
+| `docker/Dockerfile` | Imagem do `app`: Python, dependências, código e o comando que roda `collectstatic` e Gunicorn | Muda a versão do Python ou o comando de partida |
+| `docker/nginx.conf` | Site do nginx no contêiner, com `/static/` no volume e o resto para `app:8000` | A configuração do site muda |
+| `docker/config.py` | Configuração lida das variáveis de ambiente | Entra uma variável nova no `config.exemplo.py` |
+| `.dockerignore` | O que fica fora da imagem, como o `config.py` local e o `.venv` | Surge outro arquivo que não deve ir para a imagem |
 | `requirements.txt` | Django, psycopg e Gunicorn, com as versões aceitas | Uma dependência entra ou muda de versão |

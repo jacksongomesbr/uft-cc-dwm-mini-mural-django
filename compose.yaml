@@ -1,0 +1,64 @@
+# Mini Mural com Docker: três serviços, o nginx, a aplicação no Gunicorn e o
+# banco. O nginx existe porque o Gunicorn não entrega arquivos estáticos.
+#
+#   docker compose up --build
+#
+# Depois, abra http://localhost:8081. A senha e a SECRET_KEY abaixo servem só
+# para rodar na sua máquina; não use este arquivo em um servidor acessível por
+# outras pessoas.
+
+services:
+  web:
+    image: nginx:1.29
+    ports:
+      # porta da sua máquina : porta do nginx no contêiner
+      - "8081:80"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - estaticos:/estaticos:ro
+    depends_on:
+      - app
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    # Sem "ports": o Gunicorn só é alcançado pelo nginx, dentro da rede do
+    # Compose.
+    environment:
+      SECRET_KEY: chave-so-para-docker-troque-em-producao
+      BANCO_HOST: banco
+      BANCO_PORTA: "5432"
+      BANCO_NOME: mini_mural
+      BANCO_USUARIO: mini_mural
+      BANCO_SENHA: senha-so-para-docker
+    volumes:
+      - estaticos:/app/staticfiles
+    depends_on:
+      banco:
+        # Só liga a aplicação depois que o PostgreSQL aceita conexões.
+        condition: service_healthy
+
+  banco:
+    image: postgres:18
+    environment:
+      # A imagem cria este usuário, com esta senha, como dono deste banco.
+      POSTGRES_USER: mini_mural
+      POSTGRES_PASSWORD: senha-so-para-docker
+      POSTGRES_DB: mini_mural
+    volumes:
+      # Na primeira vez, com o volume vazio, a imagem executa os arquivos de
+      # /docker-entrypoint-initdb.d em ordem alfabética: esquema, depois exemplos.
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./sql/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+      # Os dados ficam neste volume e sobrevivem a "docker compose down".
+      - dados:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mini_mural -d mini_mural"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  dados:
+  estaticos:

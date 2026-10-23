@@ -1,5 +1,5 @@
 # Configuração local, com senha do banco e SECRET_KEY.
-config.py
+/config.py
 
 # Ambiente virtual e arquivos gerados.
 .venv/

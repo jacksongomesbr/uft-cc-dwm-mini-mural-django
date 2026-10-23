@@ -1,0 +1,9 @@
+# Fica fora da imagem: configuração local com senha, ambiente virtual da sua
+# máquina, arquivos gerados, Git e o que não roda.
+config.py
+.venv
+staticfiles
+__pycache__
+.git
+docs
+.DS_Store

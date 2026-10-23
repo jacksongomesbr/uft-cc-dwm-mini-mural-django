@@ -284,3 +284,28 @@ período.
 - **Consequência aceita:** depois de mudar um CSS ou um JavaScript, é preciso
   rodar o `collectstatic` de novo. Sem isso, o navegador continua recebendo a
   versão anterior.
+
+## Ambiente de desenvolvimento
+
+### D22. Docker com três serviços: nginx, aplicação e banco
+
+- **Decisão:** `compose.yaml` sobe três contêineres. O `web` usa a imagem
+  oficial do nginx e entrega os estáticos; o `app` roda o Django no Gunicorn,
+  em uma imagem feita a partir de `python:3.13-slim`; o `banco` usa a imagem
+  oficial `postgres:18`, que executa o `schema.sql` e o `seed.sql` na primeira
+  partida. Os estáticos passam do `app` para o `web` pelo volume `estaticos`.
+- **Alternativa descartada:** dois contêineres, com o Django entregando os
+  próprios estáticos pela biblioteca WhiteNoise, ou com o `runserver`.
+- **Motivo:** o Gunicorn não entrega arquivos estáticos, e o projeto deixa essa
+  tarefa para o servidor web (D21). Com nginx na frente, o Docker reproduz a
+  mesma divisão da instalação direta com nginx e Gunicorn (D4), sem mudar o
+  código. A imagem do PostgreSQL já sabe executar arquivos SQL na primeira
+  partida, então o esquema continua sendo o mesmo `schema.sql` (D8).
+- **Consequência aceita:** o contêiner usa `docker/config.py`, que lê a chave e
+  o banco das variáveis de ambiente, no lugar do `config.py` local; os dois arquivos
+  precisam continuar com as mesmas variáveis. O `app` roda o `collectstatic` a
+  cada partida, para o volume acompanhar a imagem. A imagem guarda uma cópia do
+  código, então cada mudança pede `docker compose up --build`. O `schema.sql` só
+  roda com o volume vazio, e mudar o esquema exige `docker compose down -v`, que
+  apaga os recados. A senha e a `SECRET_KEY` ficam escritas em `compose.yaml`,
+  o que serve para a máquina de desenvolvimento e não para produção.
