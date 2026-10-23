@@ -9,6 +9,10 @@ O objetivo do projeto orienta todas elas: mostrar a versão mais simples de uma
 aplicação web com Django e banco de dados, legível para quem está no 4º ou 5º
 período.
 
+Os números não mudam de uma etapa para outra, para você poder comparar os
+ramos. Quando uma etapa revê uma decisão anterior, a decisão antiga ganha uma
+nota que aponta para a nova, e a nova entra no fim do documento.
+
 ## Arquitetura
 
 ### D1. Monólito com HTML montado no servidor
@@ -71,6 +75,9 @@ período.
 
 ### D5. Projeto Django mínimo
 
+> **Revista na etapa 3 (D23):** entraram `auth`, `sessions` e `contenttypes`,
+> com as tabelas deles criadas pelo `migrate`. Admin e messages continuam fora.
+
 - **Decisão:** `INSTALLED_APPS` tem só `django.contrib.staticfiles` e `mural`.
   O `MIDDLEWARE` mantém segurança, CSRF e proteção contra clickjacking.
 - **Alternativa descartada:** o projeto padrão do `startproject`, com admin,
@@ -95,6 +102,9 @@ período.
 
 ### D7. Validação em função própria, sem `django.forms`
 
+> **Escopo na etapa 3 (D24):** vale para o formulário de recado. Login e
+> cadastro usam os formulários do Django, que trazem as regras de senha.
+
 - **Decisão:** `validar_recado()`, em `mural/validacao.py`, recebe o texto e
   devolve a mensagem de erro ou `None`. O template escreve o formulário em HTML.
 - **Alternativa descartada:** uma classe `Form` com `clean_texto()`, que
@@ -109,6 +119,10 @@ período.
 ## Dados
 
 ### D8. Esquema em SQL executado à mão, modelo com `managed = False`
+
+> **Revista na etapa 3 (D23 e D26):** a tabela `recados` continua no
+> `schema.sql`, mas agora aponta para `auth_user` e é carregada pelo comando
+> `carregar_esquema`, depois do `migrate`.
 
 - **Decisão:** `sql/schema.sql` apaga e cria a tabela; `sql/seed.sql` insere os
   exemplos. O modelo `Recado` usa a tabela pronta, com `managed = False`.
@@ -137,6 +151,9 @@ período.
 
 ### D10. Recados no banco, compartilhados por todos
 
+> **Revista na etapa 3 (D25):** os recados agora são compartilhados entre os
+> usuários logados, e cada recado guarda o autor.
+
 - **Decisão:** os recados ficam na tabela `recados` do PostgreSQL.
 - **Alternativa descartada:** guardar os recados na sessão do Django ou em um
   arquivo JSON no servidor.
@@ -149,6 +166,9 @@ período.
   arquiva qualquer recado.
 
 ### D11. Ordem do mural em cookie
+
+> **Mantida na etapa 3:** com login, a ordem poderia ir para o banco, por
+> usuário. Ela continua no cookie para não mudar o comportamento da etapa 2.
 
 - **Decisão:** a preferência de ordem fica no cookie `mini_mural_ordem`.
 - **Alternativa descartada:** uma tabela `preferencias` no banco.
@@ -289,6 +309,9 @@ período.
 
 ### D22. Docker com três serviços: nginx, aplicação e banco
 
+> **Revista na etapa 3 (D26):** o PostgreSQL deixou de executar o `schema.sql`
+> na primeira partida. Quem cria as tabelas agora é o contêiner `app`.
+
 - **Decisão:** `compose.yaml` sobe três contêineres. O `web` usa a imagem
   oficial do nginx e entrega os estáticos; o `app` roda o Django no Gunicorn,
   em uma imagem feita a partir de `python:3.13-slim`; o `banco` usa a imagem
@@ -309,3 +332,77 @@ período.
   roda com o volume vazio, e mudar o esquema exige `docker compose down -v`, que
   apaga os recados. A senha e a `SECRET_KEY` ficam escritas em `compose.yaml`,
   o que serve para a máquina de desenvolvimento e não para produção.
+
+## Login (etapa 3)
+
+### D23. Login com `django.contrib.auth` e migrations só para os apps do Django
+
+- **Decisão:** o login usa o `django.contrib.auth`, com as sessões do
+  `django.contrib.sessions` guardadas no banco. As tabelas desses apps
+  (`auth_user`, `django_session` e outras) vêm do `python manage.py migrate`. A
+  tabela do mural continua no `schema.sql`, com `managed = False` (D8).
+- **Alternativa descartada:** uma tabela de usuários própria no `schema.sql`,
+  com hash de senha e sessão escritos à mão, como seria sem framework.
+- **Motivo:** o Django já resolve o login com cuidado: hash de senha com PBKDF2,
+  troca do identificador de sessão no login, regras de senha e proteção do
+  parâmetro `next`. Escrever tudo à mão ensinaria a reinventar, com mais chance
+  de defeito, o que o framework entrega pronto. A consequência de D5 já previa
+  este caminho.
+- **Consequência aceita:** o banco passa a ter tabelas de duas origens, e a
+  ordem importa: primeiro o `migrate`, depois o `schema.sql`, porque `recados`
+  aponta para `auth_user`. O tipo de `autor_id` precisa acompanhar o de
+  `auth_user.id`, que é `integer`. A consulta de recados com `select_related`
+  traz para a memória também o hash da senha do autor, que o template não usa.
+
+### D24. Telas de login, saída e cadastro com as views e os formulários do Django
+
+- **Decisão:** a tela de entrar é a `LoginView`, com um template próprio e
+  resposta 422 quando o login falha. A saída é a `LogoutView`, que só aceita
+  POST. O cadastro é uma view em função com o `UserCreationForm`, que cria o
+  usuário e já faz o login.
+- **Alternativa descartada:** escrever as três telas à mão, lendo
+  `request.POST` como no formulário de recado (D7).
+- **Motivo:** os formulários do Django aplicam as regras de
+  `AUTH_PASSWORD_VALIDATORS`, conferem nome repetido sem diferenciar maiúsculas
+  e escrevem as mensagens em português. Repetir isso à mão duplicaria código
+  sensível.
+- **Consequência aceita:** o HTML dos campos sai dos widgets do Django, e o
+  template só o posiciona. O login diferencia maiúsculas no nome, enquanto o
+  cadastro recusa nomes que só diferem nelas; a conta `exemplo` não entra como
+  `Exemplo`, e a mensagem de erro do Django avisa isso.
+
+### D25. Tudo exige login, menos o recado público
+
+- **Decisão:** mural, Sobre, publicar e arquivar levam `@login_required`, que
+  manda quem não entrou para `/entrar/?next=...`. A exceção é o detalhe de um
+  recado marcado como público, que qualquer pessoa lê pelo endereço, sem botão
+  de arquivar. Todo recado nasce privado (`publico boolean DEFAULT false`), e a
+  caixa "Público" só existe no formulário de publicação. O recado guarda o
+  autor. Qualquer usuário logado arquiva qualquer recado, como na etapa 2.
+- **Alternativa descartada:** mostrar a quem não entrou uma lista dos recados
+  públicos em `/`, ou deixar só o autor arquivar o próprio recado.
+- **Motivo:** o pedido da etapa é que todo o mural exija login e que o recado
+  público possa ser lido sem login. O detalhe por endereço atende a leitura
+  pública com a menor mudança, e arquivar continua com a regra da etapa 2.
+- **Consequência aceita:** quem não entrou só chega a um recado público se
+  receber o endereço dele. Um recado não muda de privado para público depois de
+  publicado. Um usuário com recados não pode ser apagado (`on_delete=PROTECT` e
+  o `REFERENCES` da tabela). Não há limite de tentativas de login: alguém pode
+  testar senhas à vontade, o que um sistema em produção precisaria impedir.
+
+### D26. Esquema carregado pelo comando `carregar_esquema`
+
+- **Decisão:** o comando `python manage.py carregar_esquema`, em
+  `mural/management/commands/`, executa o `schema.sql` e, com `--exemplos`, cria
+  o usuário `exemplo` pelo ORM e executa o `seed.sql`. Com `--se-ausente`, ele
+  não faz nada se a tabela `recados` já existe. No Docker, o contêiner `app` roda
+  `migrate` e `carregar_esquema --se-ausente --exemplos` a cada partida.
+- **Alternativa descartada:** continuar com o `psql -f`, na instalação direta, e
+  com o `/docker-entrypoint-initdb.d` do PostgreSQL, no Docker.
+- **Motivo:** o `schema.sql` agora depende das tabelas do `migrate`, e o
+  PostgreSQL executaria os arquivos de `initdb` antes de o Django criar essas
+  tabelas. O comando roda no lugar certo da sequência, nos dois jeitos de
+  instalar, e cria o usuário de exemplo com o hash certo sem escrevê-lo no SQL.
+- **Consequência aceita:** o projeto tem um comando próprio para manter. Sem
+  `--se-ausente`, ele apaga os recados, como o `schema.sql` sempre fez; no
+  Docker, uma mudança no esquema só vale depois de `docker compose down -v`.

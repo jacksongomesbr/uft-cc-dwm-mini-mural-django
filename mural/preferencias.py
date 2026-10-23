@@ -1,7 +1,8 @@
 """Ordem do mural, guardada em cookie.
 
-A ordem é uma preferência de quem usa o navegador. Sem login, o servidor não
-distingue as pessoas, por isso ela fica em cookie, e não no banco.
+A ordem é uma preferência de quem usa o navegador, e fica em cookie. Com o
+login, ela poderia ir para o banco, por usuário; continua no cookie para manter
+o comportamento das etapas anteriores (decisão D11).
 """
 
 COOKIE_DA_ORDEM = 'mini_mural_ordem'

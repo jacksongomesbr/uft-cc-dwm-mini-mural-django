@@ -32,9 +32,10 @@ flowchart TD
     app --> recados["recados.py: consultas"]
     app --> validacao["validacao.py: regra do texto"]
     app --> preferencias["preferencias.py: cookie da ordem"]
-    app --> views["views.py: quatro views"]
+    app --> views["views.py: mural, login e cadastro"]
     app --> urlsa["urls.py: endereços"]
-    app --> templates["templates/: páginas, 404 e 500"]
+    app --> templates["templates/: páginas, login, cadastro, 404 e 500"]
+    app --> comando["management/commands/carregar_esquema.py"]
     app --> static["static/mural/: CSS e JavaScript"]
     app --> tests["tests.py: regras sem banco"]
 
@@ -91,16 +92,17 @@ flowchart LR
 | Arquivo | Conteúdo | Muda quando |
 |---|---|---|
 | `manage.py` | Linha de comando do Django: `test`, `collectstatic`, `shell` | Raramente |
-| `mini_mural/settings.py` | Apps, middlewares, banco, fuso, estáticos e log, com os valores locais lidos de `config.py` | Entra um app, um middleware ou uma configuração |
+| `mini_mural/settings.py` | Apps, middlewares, banco, fuso, estáticos, log, endereços de login e regras de senha, com os valores locais lidos de `config.py` | Entra um app, um middleware ou uma configuração |
 | `mini_mural/urls.py` | Inclui as rotas do app `mural` | Entra outro app |
 | `mini_mural/wsgi.py` | A `application` que o Gunicorn e o mod_wsgi chamam | Raramente |
-| `mural/models.py` | O modelo `Recado`, com `managed = False` | O `schema.sql` muda |
+| `mural/models.py` | O modelo `Recado`, com `managed = False`, autor e público | O `schema.sql` muda |
 | `mural/recados.py` | `listar_recados()`, `buscar_recado()`, `publicar_recado()`, `arquivar_recado()` e `resumir_recados()` | Uma consulta muda |
 | `mural/validacao.py` | `validar_recado()`, `LIMITE_DO_RECADO` e `normalizar_quebras_de_linha()` | A regra do texto muda |
 | `mural/preferencias.py` | `ler_ordem()`, `salvar_ordem()` e a lista `ORDENS` | Surge outra preferência ou outra ordem |
-| `mural/views.py` | As views `mural`, `recado`, `arquivar` e `sobre`, e `redirecionar()` | O comportamento de uma página muda |
-| `mural/urls.py` | Os quatro endereços e seus nomes | Um endereço muda |
-| `mural/templates/mural/` | `base.html` com a navegação e uma página por view, além da página de recado ausente | O HTML de uma página muda |
+| `mural/views.py` | As views `mural`, `recado`, `arquivar`, `sobre` e `cadastro`, a classe `Entrar` e `redirecionar()` | O comportamento de uma página muda |
+| `mural/urls.py` | Os endereços do mural, de entrar, de sair e de cadastro, com seus nomes | Um endereço muda |
+| `mural/templates/mural/` | `base.html` com a navegação (que muda conforme o login), uma página por view, as telas `entrar.html` e `cadastro.html` e a página de recado ausente |
+| `mural/management/commands/carregar_esquema.py` | O comando que roda o `schema.sql` e, com `--exemplos`, cria o usuário `exemplo` e roda o `seed.sql` | A forma de carregar o esquema muda | O HTML de uma página muda |
 | `mural/templates/404.html` e `500.html` | Páginas de endereço inexistente e de erro do servidor | O texto dessas páginas muda |
 | `mural/static/mural/css/estilo.css` | Cores, espaços e tamanhos, definidos como variáveis CSS no topo | A aparência muda |
 | `mural/static/mural/js/mural.js` | Contador de caracteres e aviso de erro antes do envio | O comportamento do formulário no navegador muda |
@@ -108,8 +110,8 @@ flowchart LR
 | `servidor/nginx.conf` | Site do nginx: porta, `/static/` e repasse ao Gunicorn | A pasta ou a porta do site muda |
 | `servidor/mini-mural.service` | Unidade do systemd que liga o Gunicorn | O número de processos ou a pasta muda |
 | `servidor/apache.conf` | Site do Apache com mod_wsgi | A pasta ou a porta do site muda |
-| `sql/schema.sql` | Tabela, restrições e índice | O modelo de dados muda |
-| `sql/seed.sql` | Os três recados de exemplo | Os exemplos mudam |
+| `sql/schema.sql` | Tabela `recados`, que aponta para `auth_user`, restrições e índice | O modelo de dados muda |
+| `sql/seed.sql` | Os três recados de exemplo, do usuário `exemplo` | Os exemplos mudam |
 | `config.exemplo.py` | Modelo da configuração local | Entra uma configuração nova |
 | `compose.yaml` | Os serviços `web`, `app` e `banco`, a porta 8081, as variáveis de ambiente e os volumes | Entra um serviço ou muda uma senha de desenvolvimento |
 | `docker/Dockerfile` | Imagem do `app`: Python, dependências, código e o comando que roda `collectstatic` e Gunicorn | Muda a versão do Python ou o comando de partida |
